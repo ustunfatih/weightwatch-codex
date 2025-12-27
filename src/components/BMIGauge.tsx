@@ -51,11 +51,12 @@ const BMIGaugeComponent: React.FC<BMIGaugeProps> = ({ weight, height }) => {
 
   return (
     <div className="card-elevated h-full p-6">
-      <h2 className="font-display text-2xl font-black text-anthracite dark:text-white mb-6">Your BMI</h2>
+      <div className="eyebrow mb-2">Body Index</div>
+      <h2 className="font-display text-2xl font-black text-[var(--ink)] mb-6">Your BMI</h2>
 
       <div className="relative w-full max-w-xs mx-auto">
         {/* Semicircle Gauge */}
-        <svg viewBox="0 0 200 120" className="w-full">
+        <svg viewBox="0 0 200 120" className="w-full" aria-label="BMI gauge">
           {/* Background Arc Segments - Equal visual size (36 degrees each) */}
           {BMI_CATEGORIES.map((cat, index) => {
             // Equal arc segments: 180 degrees / 5 categories = 36 degrees each
@@ -101,22 +102,22 @@ const BMIGaugeComponent: React.FC<BMIGaugeProps> = ({ weight, height }) => {
               y1="100"
               x2="30"
               y2="100"
-              stroke="#1A202C"
+              stroke="var(--ink)"
               strokeWidth="3"
               strokeLinecap="round"
             />
-            <circle cx="100" cy="100" r="6" fill="#1A202C" />
+            <circle cx="100" cy="100" r="6" fill="var(--ink)" />
           </g>
 
           {/* Labels - matching reference image */}
-          <text x="15" y="108" className="fill-gray-600" fontSize="12" fontWeight="600">10</text>
-          <text x="100" y="15" className="fill-gray-600" fontSize="12" fontWeight="600" textAnchor="middle">28</text>
-          <text x="185" y="108" className="fill-gray-600" fontSize="12" fontWeight="600" textAnchor="end">45</text>
+          <text x="15" y="108" className="fill-[var(--ink-muted)]" fontSize="12" fontWeight="600">10</text>
+          <text x="100" y="15" className="fill-[var(--ink-muted)]" fontSize="12" fontWeight="600" textAnchor="middle">28</text>
+          <text x="185" y="108" className="fill-[var(--ink-muted)]" fontSize="12" fontWeight="600" textAnchor="end">45</text>
         </svg>
 
         {/* BMI Value */}
         <div className="text-center mt-4">
-          <div className="text-5xl font-bold text-anthracite dark:text-white">{bmi.toFixed(1)}</div>
+          <div className="text-5xl font-bold text-[var(--ink)]">{bmi.toFixed(1)}</div>
           <div
             className="inline-block mt-3 px-6 py-2 rounded-full text-white font-semibold text-sm shadow-lg"
             style={{ backgroundColor: BMI_CATEGORIES.find(c => c.category === category)?.color }}
@@ -131,9 +132,9 @@ const BMIGaugeComponent: React.FC<BMIGaugeProps> = ({ weight, height }) => {
         {BMI_CATEGORIES.map((cat) => (
           <div
             key={cat.category}
-            className={`flex items-center justify-between p-2 rounded-lg transition-all ${category === cat.category
-                ? 'bg-gray-100 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600'
-                : 'bg-gray-50 dark:bg-gray-800/50'
+            className={`flex items-center justify-between p-2 rounded-xl transition-all ${category === cat.category
+                ? 'bg-[var(--paper-2)] border-2 border-[color:var(--border-default)]'
+                : 'bg-[var(--paper-3)] border border-transparent'
               }`}
           >
             <div className="flex items-center gap-2">
@@ -141,11 +142,11 @@ const BMIGaugeComponent: React.FC<BMIGaugeProps> = ({ weight, height }) => {
                 className="w-4 h-4 rounded-full shadow-sm"
                 style={{ backgroundColor: cat.color }}
               />
-              <span className={`text-sm ${category === cat.category ? 'font-semibold' : 'font-medium'} text-anthracite dark:text-gray-200`}>
+              <span className={`text-sm ${category === cat.category ? 'font-semibold' : 'font-medium'} text-[var(--ink)]`}>
                 {cat.category}
               </span>
             </div>
-            <span className="text-xs text-gray-600 dark:text-gray-400">
+            <span className="text-xs text-[var(--ink-muted)]">
               {cat.min.toFixed(1)} - {cat.max === 100 ? '40+' : cat.max.toFixed(1)}
             </span>
           </div>
@@ -153,14 +154,14 @@ const BMIGaugeComponent: React.FC<BMIGaugeProps> = ({ weight, height }) => {
       </div>
 
       {/* BMI Info */}
-      <div className="mt-6 space-y-2 text-sm text-gray-600 dark:text-gray-400">
-        <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+      <div className="mt-6 space-y-2 text-sm text-[var(--ink-muted)]">
+        <div className="flex justify-between items-center p-3 bg-[var(--paper-2)] rounded-xl border border-[color:var(--border-subtle)]">
           <span>Weight</span>
-          <span className="font-semibold text-anthracite dark:text-white">{weight.toFixed(1)} kg</span>
+          <span className="font-semibold text-[var(--ink)]">{weight.toFixed(1)} kg</span>
         </div>
-        <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+        <div className="flex justify-between items-center p-3 bg-[var(--paper-2)] rounded-xl border border-[color:var(--border-subtle)]">
           <span>Height</span>
-          <span className="font-semibold text-anthracite dark:text-white">{height} cm</span>
+          <span className="font-semibold text-[var(--ink)]">{height} cm</span>
         </div>
       </div>
     </div>

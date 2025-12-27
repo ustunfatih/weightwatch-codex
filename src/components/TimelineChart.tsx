@@ -11,6 +11,8 @@ import {
 } from 'recharts';
 import { WeightEntry, TargetData } from '../types';
 import { format, parseISO, startOfWeek, startOfMonth, differenceInDays, addDays } from 'date-fns';
+import { STORAGE_KEYS, readString, writeString } from '../services/storage';
+import { parseDateFlexible } from '../utils/dateUtils';
 
 interface TimelineChartProps {
   entries: WeightEntry[];
@@ -26,29 +28,34 @@ interface ChartDataPoint {
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
-const STORAGE_KEY = 'weightwatch-timeline-view';
-
 export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetData }) => {
   // Load saved view preference from localStorage
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = readString(STORAGE_KEYS.TIMELINE_VIEW);
     return (saved as ViewMode) || 'daily';
   });
 
   // Save view preference when it changes
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, viewMode);
+    writeString(STORAGE_KEYS.TIMELINE_VIEW, viewMode);
   }, [viewMode]);
 
   // Memoize chart data generation based on view mode
   const chartData = useMemo<ChartDataPoint[]>(() => {
-    const startDate = parseISO(targetData.startDate);
-    const endDate = parseISO(targetData.endDate);
+    const startDate = parseDateFlexible(targetData.startDate) ?? new Date();
+    const endDate = parseDateFlexible(targetData.endDate) ?? new Date();
     const dailyTargetLoss = targetData.totalKg / targetData.totalDuration;
 
+    const parsedEntries = entries
+      .map((entry) => ({
+        ...entry,
+        dateObj: parseDateFlexible(entry.date),
+      }))
+      .filter((entry): entry is WeightEntry & { dateObj: Date } => Boolean(entry.dateObj));
+
     // Sort entries by date
-    const sortedEntries = [...entries].sort(
-      (a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime()
+    const sortedEntries = [...parsedEntries].sort(
+      (a, b) => a.dateObj.getTime() - b.dateObj.getTime()
     );
 
     // Helper function to calculate target weight for any date
@@ -68,10 +75,10 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
       // Add all actual weight entries
       sortedEntries.forEach(entry => {
         allPoints.set(entry.date, {
-          date: format(parseISO(entry.date), 'MMM dd'),
+          date: format(entry.dateObj, 'MMM dd'),
           fullDate: entry.date,
           weight: entry.weight,
-          target: calculateTargetForDate(parseISO(entry.date)),
+          target: calculateTargetForDate(entry.dateObj),
         });
       });
 
@@ -133,7 +140,7 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
       const weekMap = new Map<string, WeightEntry>();
 
       sortedEntries.forEach((entry) => {
-        const weekStart = startOfWeek(parseISO(entry.date), { weekStartsOn: 0 }); // Sunday
+        const weekStart = startOfWeek(entry.dateObj, { weekStartsOn: 0 }); // Sunday
         const weekKey = format(weekStart, 'yyyy-MM-dd');
         weekMap.set(weekKey, entry); // Last entry wins
       });
@@ -162,30 +169,22 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
 
         return {
           date: format(weekDate, 'MMM dd'),
-          fullDate: entry?.date || weekKey,
+          fullDate: index === 0
+            ? format(startDate, 'yyyy-MM-dd')
+            : index === sortedWeeks.length - 1
+              ? format(endDate, 'yyyy-MM-dd')
+              : entry?.date || weekKey,
           weight: entry?.weight || null,
           target: calculateTargetForDate(targetDate),
         };
       });
-
-      // Explicitly add final point at exact endDate to ensure target line extends fully
-      const endDateStr = format(endDate, 'yyyy-MM-dd');
-      const lastWeekPoint = dataPoints[dataPoints.length - 1];
-      if (lastWeekPoint && lastWeekPoint.fullDate !== endDateStr) {
-        dataPoints.push({
-          date: format(endDate, 'MMM dd'),
-          fullDate: endDateStr,
-          weight: null,
-          target: calculateTargetForDate(endDate),
-        });
-      }
 
     } else {
       // Monthly view: Group by month, use last entry of each month
       const monthMap = new Map<string, WeightEntry>();
 
       sortedEntries.forEach((entry) => {
-        const monthStart = startOfMonth(parseISO(entry.date));
+        const monthStart = startOfMonth(entry.dateObj);
         const monthKey = format(monthStart, 'yyyy-MM');
         monthMap.set(monthKey, entry); // Last entry wins
       });
@@ -215,23 +214,15 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
 
         return {
           date: format(monthDate, 'MMM yyyy'),
-          fullDate: entry?.date || format(monthDate, 'yyyy-MM-dd'),
+          fullDate: index === 0
+            ? format(startDate, 'yyyy-MM-dd')
+            : index === sortedMonths.length - 1
+              ? format(endDate, 'yyyy-MM-dd')
+              : entry?.date || format(monthDate, 'yyyy-MM-dd'),
           weight: entry?.weight || null,
           target: calculateTargetForDate(targetDate),
         };
       });
-
-      // Explicitly add final point at exact endDate to ensure target line extends fully
-      const endDateStr = format(endDate, 'yyyy-MM-dd');
-      const lastMonthPoint = dataPoints[dataPoints.length - 1];
-      if (lastMonthPoint && lastMonthPoint.fullDate !== endDateStr) {
-        dataPoints.push({
-          date: format(endDate, 'MMM dd, yyyy'),
-          fullDate: endDateStr,
-          weight: null,
-          target: calculateTargetForDate(endDate),
-        });
-      }
     }
 
     return dataPoints;
@@ -240,6 +231,7 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
   const CustomTooltip: React.FC<TooltipProps<number, string>> = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload as ChartDataPoint;
+      const fullDate = parseDateFlexible(data.fullDate);
 
       // Find previous entry for change calculation
       const currentIndex = chartData.findIndex(d => d.fullDate === data.fullDate);
@@ -257,19 +249,19 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
       const targetDiff = data.weight ? data.weight - data.target : null;
 
       // Count days since start for this entry
-      const daysSinceStart = data.weight
-        ? differenceInDays(parseISO(data.fullDate), parseISO(targetData.startDate))
+      const daysSinceStart = data.weight && fullDate
+        ? differenceInDays(fullDate, startDate)
         : null;
 
       return (
-        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm p-4 rounded-2xl shadow-2xl border-2 border-emerald-200 dark:border-emerald-800 min-w-[220px] animate-in fade-in zoom-in duration-200">
+        <div className="bg-[var(--paper-3)] backdrop-blur-sm p-4 rounded-2xl shadow-2xl border-2 border-[color:var(--border-default)] min-w-[220px] animate-in fade-in zoom-in duration-200">
           {/* Date Header */}
-          <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              {format(parseISO(data.fullDate), 'EEE, MMM dd, yyyy')}
+          <div className="flex items-center justify-between mb-3 pb-2 border-b border-[color:var(--border-subtle)]">
+            <p className="text-sm font-semibold text-[var(--ink)]">
+              {fullDate ? format(fullDate, 'EEE, MMM dd, yyyy') : data.fullDate}
             </p>
             {daysSinceStart !== null && (
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-[var(--ink-muted)]">
                 Day {daysSinceStart + 1}
               </p>
             )}
@@ -280,17 +272,17 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
             <div className="space-y-2">
               {/* Actual Weight with Trend */}
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 dark:text-gray-400">Actual:</span>
+                <span className="text-xs text-[var(--ink-muted)]">Actual:</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                  <span className="text-lg font-bold text-[var(--accent-2)]">
                     {data.weight.toFixed(1)} kg
                   </span>
                   {weightChange !== null && (
                     <span className={`text-xs font-semibold flex items-center ${weightChange < 0
-                      ? 'text-green-600 dark:text-green-400'
+                      ? 'text-[var(--accent-2)]'
                       : weightChange > 0
-                        ? 'text-red-600 dark:text-red-400'
-                        : 'text-gray-600'
+                        ? 'text-[var(--accent)]'
+                        : 'text-[var(--ink-muted)]'
                       }`}>
                       {weightChange < 0 ? '↓' : weightChange > 0 ? '↑' : '→'}
                       {Math.abs(weightChange).toFixed(2)} kg
@@ -301,19 +293,19 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
 
               {/* Target Weight */}
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 dark:text-gray-400">Target:</span>
-                <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
+                <span className="text-xs text-[var(--ink-muted)]">Target:</span>
+                <span className="text-sm font-semibold text-[var(--accent)]">
                   {data.target.toFixed(1)} kg
                 </span>
               </div>
 
               {/* Difference from Target */}
               {targetDiff !== null && (
-                <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-700">
-                  <span className="text-xs text-gray-600 dark:text-gray-400">vs Target:</span>
+                <div className="flex items-center justify-between pt-1 border-t border-[color:var(--border-subtle)]">
+                  <span className="text-xs text-[var(--ink-muted)]">vs Target:</span>
                   <span className={`text-xs font-semibold ${targetDiff < 0
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-orange-600 dark:text-orange-400'
+                    ? 'text-[var(--accent-2)]'
+                    : 'text-[var(--accent)]'
                     }`}>
                     {targetDiff < 0 ? '✓ ' : ''}{Math.abs(targetDiff).toFixed(1)} kg {
                       targetDiff < 0 ? 'ahead' : 'behind'
@@ -325,8 +317,8 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
               {/* BMI */}
               {bmi !== null && (
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-xs text-gray-600 dark:text-gray-400">BMI:</span>
-                  <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">
+                  <span className="text-xs text-[var(--ink-muted)]">BMI:</span>
+                  <span className="text-xs font-semibold text-[var(--accent-2)]">
                     {bmi.toFixed(1)}
                   </span>
                 </div>
@@ -335,8 +327,8 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
           ) : (
             /* Target Line Only */
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-600 dark:text-gray-400">Target:</span>
-              <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
+              <span className="text-xs text-[var(--ink-muted)]">Target:</span>
+              <span className="text-sm font-semibold text-[var(--accent)]">
                 {data.target.toFixed(1)} kg
               </span>
             </div>
@@ -417,18 +409,18 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
     <div className="card-elevated h-full p-6">
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-2xl font-black text-anthracite dark:text-white">Weight Timeline</h2>
+          <div>
+            <div className="eyebrow mb-2">Tracking</div>
+            <h2 className="font-display text-2xl font-black text-[var(--ink)]">Weight Timeline</h2>
+          </div>
 
           {/* View Mode Selector */}
-          <div className="flex gap-2 bg-gray-50 dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
+          <div className="segmented flex gap-2">
             {viewModes.map((mode) => (
               <button
                 key={mode.value}
                 onClick={() => setViewMode(mode.value)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === mode.value
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/30'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-anthracite dark:hover:text-white'
-                  }`}
+                className={`segmented-btn ${viewMode === mode.value ? 'active' : ''}`}
               >
                 {mode.label}
               </button>
@@ -438,29 +430,29 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
 
         <div className="flex gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-1 bg-emerald-600 rounded-full" />
-            <span className="text-gray-600 dark:text-gray-400">Actual</span>
+            <div className="w-4 h-1 rounded-full" style={{ backgroundColor: 'var(--chart-actual)' }} />
+            <span className="text-[var(--ink-muted)]">Actual</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-1 bg-orange-600 rounded-full border-2 border-orange-600 border-dashed" />
-            <span className="text-gray-600 dark:text-gray-400">Target Pace</span>
+            <div className="w-4 h-1 rounded-full border-2 border-dashed" style={{ borderColor: 'var(--chart-target)' }} />
+            <span className="text-[var(--ink-muted)]">Target Pace</span>
           </div>
         </div>
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
           <XAxis
             dataKey="date"
-            stroke="#9CA3AF"
-            tick={{ fill: '#6B7280', fontSize: 12 }}
+            stroke="var(--chart-axis)"
+            tick={{ fill: 'var(--ink-muted)', fontSize: 12 }}
             tickLine={false}
             interval={tickInterval}
           />
           <YAxis
-            stroke="#9CA3AF"
-            tick={{ fill: '#6B7280', fontSize: 12 }}
+            stroke="var(--chart-axis)"
+            tick={{ fill: 'var(--ink-muted)', fontSize: 12 }}
             tickLine={false}
             domain={yAxisDomain}
             ticks={yAxisTicks}
@@ -471,21 +463,21 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
           <Line
             type="linear"
             dataKey="target"
-            stroke="#FB8C00"
+            stroke="var(--chart-target)"
             strokeWidth={2}
             strokeDasharray="5 5"
             dot={false}
-            activeDot={{ r: 4, fill: '#FB8C00' }}
+            activeDot={{ r: 4, fill: 'var(--chart-target)' }}
           />
 
           {/* Actual weight line - connects all actual data points */}
           <Line
             type="monotone"
             dataKey="weight"
-            stroke="#43A047"
+            stroke="var(--chart-actual)"
             strokeWidth={3}
-            dot={{ fill: '#43A047', r: 4 }}
-            activeDot={{ r: 6, fill: '#66BB6A' }}
+            dot={{ fill: 'var(--chart-actual)', r: 4 }}
+            activeDot={{ r: 6, fill: 'var(--chart-actual)' }}
             connectNulls={true}
             isAnimationActive={false}
           />
@@ -494,13 +486,13 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
 
       {/* Milestone markers */}
       <div className="mt-6 grid grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-xl p-4 border border-emerald-100 dark:border-emerald-900/30">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Starting Weight</div>
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{targetData.startWeight} kg</div>
+        <div className="rounded-2xl p-4 border border-[color:var(--border-subtle)] bg-[var(--paper-2)]">
+          <div className="text-sm text-[var(--ink-muted)] mb-1">Starting Weight</div>
+          <div className="text-2xl font-bold text-[var(--accent-2)]">{targetData.startWeight} kg</div>
         </div>
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/30 rounded-xl p-4 border border-orange-100 dark:border-orange-900/30">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Weight</div>
-          <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+        <div className="rounded-2xl p-4 border border-[color:var(--border-subtle)] bg-[var(--paper-2)]">
+          <div className="text-sm text-[var(--ink-muted)] mb-1">Current Weight</div>
+          <div className="text-2xl font-bold text-[var(--accent)]">
             {entries[entries.length - 1].weight} kg
           </div>
         </div>

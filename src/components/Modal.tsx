@@ -56,34 +56,34 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
             className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none"
             style={{ zIndex: 99999 }}
           >
-            <motion.div
-              ref={modalRef}
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ type: 'spring', duration: 0.3 }}
-              className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden border border-gray-200 dark:border-gray-700 pointer-events-auto"
-              onClick={(e) => e.stopPropagation()}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="modal-title"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                <h2
-                  id="modal-title"
-                  className="font-display text-2xl font-black text-anthracite dark:text-white"
-                >
-                  {title}
-                </h2>
-                <button
-                  onClick={onClose}
-                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  aria-label="Close modal"
-                >
-                  <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                </button>
-              </div>
+          <motion.div
+            ref={modalRef}
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: 'spring', duration: 0.3 }}
+            className="rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden border border-[color:var(--border-default)] pointer-events-auto bg-[var(--paper-3)]"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-[color:var(--border-subtle)]">
+              <h2
+                id="modal-title"
+                className="font-display text-2xl font-black text-[var(--ink)]"
+              >
+                {title}
+              </h2>
+              <button
+                onClick={onClose}
+                className="p-2 rounded-full hover:bg-[var(--paper-2)] transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5 text-[var(--ink-muted)]" />
+              </button>
+            </div>
 
               {/* Content */}
               <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">

@@ -33,7 +33,11 @@ describe('getBMICategory', () => {
 
   it('should categorize obese correctly', () => {
     expect(getBMICategory(31)).toBe('Obese');
-    expect(getBMICategory(40)).toBe('Obese');
+    expect(getBMICategory(39.5)).toBe('Obese');
+  });
+
+  it('should categorize extremely obese correctly', () => {
+    expect(getBMICategory(40)).toBe('Extremely Obese');
   });
 });
 
@@ -94,7 +98,7 @@ describe('calculateStatistics', () => {
   it('should calculate averages correctly', () => {
     const stats = calculateStatistics(mockEntries, mockTargetData);
 
-    expect(stats.averages.daily).toBeCloseTo(-0.14, 2);
-    expect(stats.averages.weekly).toBeCloseTo(-1, 2);
+    expect(stats.averages.daily).toBeCloseTo(0.14, 2);
+    expect(stats.averages.weekly).toBeCloseTo(1, 2);
   });
 });

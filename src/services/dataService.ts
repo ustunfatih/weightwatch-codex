@@ -1,4 +1,7 @@
 import { WeightEntry, TargetData } from '../types';
+import { STORAGE_KEYS, readJSON, writeJSON, writeString, removeKey } from './storage';
+import { googleSheetsService } from './GoogleSheetsService';
+import { normalizeRecordedAt, parseDateFlexible, toISODate } from '../utils/dateUtils';
 
 // Mock data based on the Google Sheets
 // In production, this would fetch from Google Sheets API
@@ -35,12 +38,6 @@ export const mockTargetData: TargetData = {
   height: 170,
 };
 
-// LocalStorage keys
-const STORAGE_KEYS = {
-  WEIGHT_ENTRIES: 'weightwatch-entries',
-  TARGET_DATA: 'weightwatch-target',
-};
-
 // Calculate derived fields for weight entry
 function calculateDerivedFields(
   entry: WeightEntry,
@@ -59,8 +56,8 @@ function calculateDerivedFields(
   const changePercent = (changeKg / previousEntry.weight) * 100;
 
   // Calculate days between entries
-  const currentDate = new Date(entry.date);
-  const prevDate = new Date(previousEntry.date);
+  const currentDate = parseDateFlexible(entry.date) ?? new Date(entry.date);
+  const prevDate = parseDateFlexible(previousEntry.date) ?? new Date(previousEntry.date);
   const daysDiff = Math.max(1, Math.floor((currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)));
 
   const dailyChange = changeKg / daysDiff;
@@ -75,7 +72,11 @@ function calculateDerivedFields(
 
 // Recalculate all derived fields for all entries
 function recalculateEntries(entries: WeightEntry[]): WeightEntry[] {
-  const sorted = [...entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const sorted = [...entries].sort((a, b) => {
+    const aDate = parseDateFlexible(a.date) ?? new Date(a.date);
+    const bDate = parseDateFlexible(b.date) ?? new Date(b.date);
+    return aDate.getTime() - bDate.getTime();
+  });
 
   return sorted.map((entry, index) => {
     const previousEntry = index > 0 ? sorted[index - 1] : null;
@@ -83,33 +84,81 @@ function recalculateEntries(entries: WeightEntry[]): WeightEntry[] {
   });
 }
 
+async function syncToSheetsIfEnabled(entries: WeightEntry[], targetData: TargetData): Promise<void> {
+  try {
+    if (!googleSheetsService.isSignedIn()) return;
+    if (!googleSheetsService.getSpreadsheetId()) return;
+    await googleSheetsService.syncToSheets(entries, targetData);
+  } catch (error) {
+    console.warn('Google Sheets sync failed:', error);
+  }
+}
+
+export function updateLastEntryDate(entries: WeightEntry[]): void {
+  if (entries.length === 0) {
+    removeKey(STORAGE_KEYS.LAST_ENTRY_DATE);
+    return;
+  }
+
+  const latest = entries.reduce((max, entry) => {
+    const entryDate = parseDateFlexible(entry.date) ?? new Date(entry.date);
+    const maxDate = parseDateFlexible(max.date) ?? new Date(max.date);
+    return entryDate.getTime() > maxDate.getTime() ? entry : max;
+  }, entries[0]);
+
+  writeString(STORAGE_KEYS.LAST_ENTRY_DATE, latest.date);
+}
+
+function normalizeStoredEntries(entries: WeightEntry[]): WeightEntry[] {
+  const normalized = entries
+    .map((entry) => {
+      const isoDate = toISODate(entry.date);
+      if (!isoDate) return null;
+      const recordedAt = normalizeRecordedAt(isoDate, entry.recordedAt);
+      return {
+        ...entry,
+        date: isoDate,
+        recordedAt,
+      };
+    })
+    .filter((entry): entry is WeightEntry => Boolean(entry));
+
+  if (normalized.length !== entries.length) {
+    writeJSON(STORAGE_KEYS.WEIGHT_ENTRIES, normalized);
+  }
+
+  return normalized;
+}
+
+function normalizeTargetData(target: TargetData): TargetData {
+  const startDate = toISODate(target.startDate) || target.startDate;
+  const endDate = toISODate(target.endDate) || target.endDate;
+  const normalized = { ...target, startDate, endDate };
+  if (startDate !== target.startDate || endDate !== target.endDate) {
+    writeJSON(STORAGE_KEYS.TARGET_DATA, normalized);
+  }
+  return normalized;
+}
+
 // Get entries from localStorage or return mock data
 function getStoredEntries(): WeightEntry[] {
-  const stored = localStorage.getItem(STORAGE_KEYS.WEIGHT_ENTRIES);
+  const stored = readJSON<WeightEntry[] | null>(STORAGE_KEYS.WEIGHT_ENTRIES, null);
   if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return mockWeightData;
-    }
+    const normalized = normalizeStoredEntries(stored);
+    updateLastEntryDate(normalized);
+    return normalized;
   }
   // Initialize with mock data if not found
-  localStorage.setItem(STORAGE_KEYS.WEIGHT_ENTRIES, JSON.stringify(mockWeightData));
+  writeJSON(STORAGE_KEYS.WEIGHT_ENTRIES, mockWeightData);
   return mockWeightData;
 }
 
 // Get target data from localStorage or return mock data
 function getStoredTargetData(): TargetData {
-  const stored = localStorage.getItem(STORAGE_KEYS.TARGET_DATA);
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return mockTargetData;
-    }
-  }
+  const stored = readJSON<TargetData | null>(STORAGE_KEYS.TARGET_DATA, null);
+  if (stored) return normalizeTargetData(stored);
   // Initialize with mock data if not found
-  localStorage.setItem(STORAGE_KEYS.TARGET_DATA, JSON.stringify(mockTargetData));
+  writeJSON(STORAGE_KEYS.TARGET_DATA, mockTargetData);
   return mockTargetData;
 }
 
@@ -144,6 +193,7 @@ export async function addWeightEntry(entry: Partial<WeightEntry>): Promise<Weigh
     changePercent: 0,
     changeKg: 0,
     dailyChange: 0,
+    recordedAt: entry.recordedAt || `${entry.date}T${new Date().toTimeString().slice(0, 5)}`,
   };
 
   entries.push(newEntry);
@@ -151,7 +201,9 @@ export async function addWeightEntry(entry: Partial<WeightEntry>): Promise<Weigh
   // Recalculate all derived fields
   const updatedEntries = recalculateEntries(entries);
 
-  localStorage.setItem(STORAGE_KEYS.WEIGHT_ENTRIES, JSON.stringify(updatedEntries));
+  writeJSON(STORAGE_KEYS.WEIGHT_ENTRIES, updatedEntries);
+  updateLastEntryDate(updatedEntries);
+  await syncToSheetsIfEnabled(updatedEntries, getStoredTargetData());
   return updatedEntries;
 }
 
@@ -175,7 +227,9 @@ export async function updateWeightEntry(date: string, updates: Partial<WeightEnt
   // Recalculate all derived fields
   const updatedEntries = recalculateEntries(entries);
 
-  localStorage.setItem(STORAGE_KEYS.WEIGHT_ENTRIES, JSON.stringify(updatedEntries));
+  writeJSON(STORAGE_KEYS.WEIGHT_ENTRIES, updatedEntries);
+  updateLastEntryDate(updatedEntries);
+  await syncToSheetsIfEnabled(updatedEntries, getStoredTargetData());
   return updatedEntries;
 }
 
@@ -193,7 +247,9 @@ export async function deleteWeightEntry(date: string): Promise<WeightEntry[]> {
   // Recalculate all derived fields
   const updatedEntries = recalculateEntries(filtered);
 
-  localStorage.setItem(STORAGE_KEYS.WEIGHT_ENTRIES, JSON.stringify(updatedEntries));
+  writeJSON(STORAGE_KEYS.WEIGHT_ENTRIES, updatedEntries);
+  updateLastEntryDate(updatedEntries);
+  await syncToSheetsIfEnabled(updatedEntries, getStoredTargetData());
   return updatedEntries;
 }
 
@@ -204,7 +260,8 @@ export async function updateTargetData(updates: Partial<TargetData>): Promise<Ta
   const currentTarget = getStoredTargetData();
   const updatedTarget = { ...currentTarget, ...updates };
 
-  localStorage.setItem(STORAGE_KEYS.TARGET_DATA, JSON.stringify(updatedTarget));
+  writeJSON(STORAGE_KEYS.TARGET_DATA, updatedTarget);
+  await syncToSheetsIfEnabled(getStoredEntries(), updatedTarget);
   return updatedTarget;
 }
 

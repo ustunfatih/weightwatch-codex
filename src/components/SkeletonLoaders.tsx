@@ -1,11 +1,11 @@
 // Base skeleton component
 export const Skeleton = ({ className = '' }: { className?: string }) => (
-  <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded ${className}`} />
+  <div className={`animate-pulse bg-[var(--border-subtle)] rounded ${className}`} />
 );
 
 // Hero card skeleton (for ProgressOverview hero)
 export const SkeletonHeroCard = () => (
-  <div className="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 dark:from-emerald-600 dark:via-teal-600 dark:to-cyan-600 rounded-3xl p-8 shadow-lg">
+  <div className="hero-panel rounded-3xl p-8 shadow-lg">
     <div className="animate-pulse">
       <div className="flex justify-between items-start mb-6">
         <div className="flex-1">

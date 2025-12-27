@@ -80,7 +80,7 @@ export const ExportMenu = ({ entries, targetData, stats }: ExportMenuProps) => {
       {/* Trigger Button */}
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-blue-500/50 transition-all"
+        className="btn-primary flex items-center gap-2 px-4 py-2"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
@@ -100,7 +100,7 @@ export const ExportMenu = ({ entries, targetData, stats }: ExportMenuProps) => {
 
             {/* Menu */}
             <motion.div
-              className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
+              className="absolute right-0 top-full mt-2 w-64 bg-[var(--paper-3)] rounded-xl shadow-2xl border border-[color:var(--border-default)] overflow-hidden z-50"
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -110,13 +110,13 @@ export const ExportMenu = ({ entries, targetData, stats }: ExportMenuProps) => {
                 {/* CSV Export */}
                 <motion.button
                   onClick={handleExportCSV}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-[var(--ink)] hover:bg-[var(--paper-2)] rounded-lg transition-colors"
                   whileHover={{ x: 4 }}
                 >
-                  <FileText className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <FileText className="w-5 h-5 text-[var(--accent-2)]" />
                   <div className="flex-1">
                     <div className="font-medium">Export CSV</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <div className="text-xs text-[var(--ink-muted)]">
                       Download all data
                     </div>
                   </div>
@@ -125,34 +125,34 @@ export const ExportMenu = ({ entries, targetData, stats }: ExportMenuProps) => {
                 {/* PDF Export */}
                 <motion.button
                   onClick={handleExportPDF}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-[var(--ink)] hover:bg-[var(--paper-2)] rounded-lg transition-colors"
                   whileHover={{ x: 4 }}
                 >
-                  <Download className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <Download className="w-5 h-5 text-[var(--accent-2)]" />
                   <div className="flex-1">
                     <div className="font-medium">Export PDF</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <div className="text-xs text-[var(--ink-muted)]">
                       Full report document
                     </div>
                   </div>
                 </motion.button>
 
                 {/* Divider */}
-                <div className="h-px bg-gray-200 dark:bg-gray-700 my-2" />
+                <div className="h-px bg-[var(--border-subtle)] my-2" />
 
                 {/* Share Image */}
                 <motion.button
                   onClick={handleGenerateShareImage}
                   disabled={isGeneratingImage}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-[var(--ink)] hover:bg-[var(--paper-2)] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   whileHover={{ x: 4 }}
                 >
-                  <ImageIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  <ImageIcon className="w-5 h-5 text-[var(--accent-3)]" />
                   <div className="flex-1">
                     <div className="font-medium">
                       {isGeneratingImage ? 'Generating...' : 'Share Image'}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <div className="text-xs text-[var(--ink-muted)]">
                       Create progress card
                     </div>
                   </div>
@@ -161,13 +161,13 @@ export const ExportMenu = ({ entries, targetData, stats }: ExportMenuProps) => {
                 {/* Copy Link */}
                 <motion.button
                   onClick={handleCopyLink}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-[var(--ink)] hover:bg-[var(--paper-2)] rounded-lg transition-colors"
                   whileHover={{ x: 4 }}
                 >
-                  <Copy className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  <Copy className="w-5 h-5 text-[var(--accent)]" />
                   <div className="flex-1">
                     <div className="font-medium">Copy Link</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <div className="text-xs text-[var(--ink-muted)]">
                       Share your dashboard
                     </div>
                   </div>

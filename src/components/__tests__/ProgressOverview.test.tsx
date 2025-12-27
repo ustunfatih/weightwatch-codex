@@ -31,35 +31,33 @@ describe('ProgressOverview', () => {
   it('should display current weight', () => {
     render(<ProgressOverview stats={mockStats} targetWeight={80} />);
 
-    expect(screen.getByText(/95/)).toBeInTheDocument();
-    expect(screen.getByText(/kg/)).toBeInTheDocument();
+    expect(screen.getByText(/95\.0 kg/)).toBeInTheDocument();
   });
 
   it('should display progress percentage', () => {
     render(<ProgressOverview stats={mockStats} targetWeight={80} />);
 
-    expect(screen.getByText(/25%/)).toBeInTheDocument();
+    expect(screen.getByText(/^25\.0%$/)).toBeInTheDocument();
   });
 
   it('should display total weight lost', () => {
     render(<ProgressOverview stats={mockStats} targetWeight={80} />);
 
-    expect(screen.getByText(/5/)).toBeInTheDocument();
-    expect(screen.getByText(/Lost/)).toBeInTheDocument();
+    expect(screen.getByText(/Weight Lost/)).toBeInTheDocument();
+    expect(screen.getByText(/^5\.0 kg$/)).toBeInTheDocument();
   });
 
   it('should display remaining weight', () => {
     render(<ProgressOverview stats={mockStats} targetWeight={80} />);
 
-    expect(screen.getByText(/15/)).toBeInTheDocument();
     expect(screen.getByText(/To Go/)).toBeInTheDocument();
+    expect(screen.getByText(/15\.0 kg/)).toBeInTheDocument();
   });
 
   it('should display days remaining', () => {
     render(<ProgressOverview stats={mockStats} targetWeight={80} />);
 
-    expect(screen.getByText(/90/)).toBeInTheDocument();
-    expect(screen.getByText(/Days Left/)).toBeInTheDocument();
+    expect(screen.getByText(/90 days to go/)).toBeInTheDocument();
   });
 
   it('should show on track status when user is on track', () => {
@@ -80,6 +78,6 @@ describe('ProgressOverview', () => {
 
     render(<ProgressOverview stats={behindStats} targetWeight={80} />);
 
-    expect(screen.getByText(/Behind/)).toBeInTheDocument();
+    expect(screen.getByText(/Time to push harder/i)).toBeInTheDocument();
   });
 });

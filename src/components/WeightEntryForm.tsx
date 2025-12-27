@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { Save, Trash2 } from 'lucide-react';
 import { WeightEntry } from '../types';
 import { VoiceInput } from './VoiceInput';
+import { parseDateFlexible } from '../utils/dateUtils';
 
 interface WeightEntryFormProps {
   entry?: WeightEntry;
@@ -14,6 +15,13 @@ interface WeightEntryFormProps {
 export const WeightEntryForm = ({ entry, onSubmit, onDelete, onCancel }: WeightEntryFormProps) => {
   const [date, setDate] = useState(entry?.date || format(new Date(), 'yyyy-MM-dd'));
   const [weight, setWeight] = useState(entry?.weight?.toString() || '');
+  const [time, setTime] = useState(() => {
+    if (entry?.recordedAt) {
+      const parsed = parseDateFlexible(entry.recordedAt, new Date());
+      if (parsed) return format(parsed, 'HH:mm');
+    }
+    return format(new Date(), 'HH:mm');
+  });
   const [errors, setErrors] = useState<{ date?: string; weight?: string }>({});
 
   const validate = (): boolean => {
@@ -55,6 +63,7 @@ export const WeightEntryForm = ({ entry, onSubmit, onDelete, onCancel }: WeightE
       date,
       weight: weightNum,
       weekDay: format(new Date(date), 'EEEE'),
+      recordedAt: `${date}T${time}`,
     });
   };
 
@@ -68,7 +77,7 @@ export const WeightEntryForm = ({ entry, onSubmit, onDelete, onCancel }: WeightE
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Date Input */}
       <div>
-        <label htmlFor="date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label htmlFor="date" className="block text-sm font-medium text-[var(--ink-muted)] mb-2">
           Date
         </label>
         <input
@@ -79,8 +88,8 @@ export const WeightEntryForm = ({ entry, onSubmit, onDelete, onCancel }: WeightE
           max={format(new Date(), 'yyyy-MM-dd')}
           className={`w-full px-4 py-3 rounded-xl border ${errors.date
             ? 'border-red-500 focus:ring-red-500'
-            : 'border-gray-300 dark:border-gray-600 focus:ring-emerald-500'
-            } bg-white dark:bg-gray-800 text-anthracite dark:text-white focus:outline-none focus:ring-2 transition-all`}
+            : 'border-[color:var(--border-subtle)] focus:ring-[color:var(--accent)]'
+            } bg-[var(--paper-3)] text-[var(--ink)] focus:outline-none focus:ring-2 transition-all`}
         />
         {errors.date && (
           <p className="mt-1 text-sm text-red-500">{errors.date}</p>
@@ -89,7 +98,7 @@ export const WeightEntryForm = ({ entry, onSubmit, onDelete, onCancel }: WeightE
 
       {/* Weight Input */}
       <div>
-        <label htmlFor="weight" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label htmlFor="weight" className="block text-sm font-medium text-[var(--ink-muted)] mb-2">
           Weight (kg)
         </label>
         <div className="flex gap-2">
@@ -104,17 +113,31 @@ export const WeightEntryForm = ({ entry, onSubmit, onDelete, onCancel }: WeightE
             placeholder="e.g., 75.5"
             className={`flex-1 px-4 py-3 rounded-xl border ${errors.weight
               ? 'border-red-500 focus:ring-red-500'
-              : 'border-gray-300 dark:border-gray-600 focus:ring-emerald-500'
-              } bg-white dark:bg-gray-800 text-anthracite dark:text-white focus:outline-none focus:ring-2 transition-all`}
+              : 'border-[color:var(--border-subtle)] focus:ring-[color:var(--accent)]'
+              } bg-[var(--paper-3)] text-[var(--ink)] focus:outline-none focus:ring-2 transition-all`}
           />
           <VoiceInput onWeightDetected={(detectedWeight) => setWeight(detectedWeight.toString())} />
         </div>
         {errors.weight && (
           <p className="mt-1 text-sm text-red-500">{errors.weight}</p>
         )}
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-xs text-[var(--ink-muted)]">
           Enter your weight between 40 and 200 kg
         </p>
+      </div>
+
+      {/* Time Input */}
+      <div>
+        <label htmlFor="time" className="block text-sm font-medium text-[var(--ink-muted)] mb-2">
+          Time of day
+        </label>
+        <input
+          type="time"
+          id="time"
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+          className="w-full px-4 py-3 rounded-xl border border-[color:var(--border-subtle)] bg-[var(--paper-3)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)] transition-all"
+        />
       </div>
 
       {/* Actions */}
@@ -132,7 +155,7 @@ export const WeightEntryForm = ({ entry, onSubmit, onDelete, onCancel }: WeightE
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+          className="btn-secondary flex-1"
         >
           Cancel
         </button>

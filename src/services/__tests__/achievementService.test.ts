@@ -2,18 +2,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { checkAchievements, getAchievementStats, loadAchievements } from '../achievementService';
 import { WeightEntry, TargetData, Statistics } from '../../types';
 
-// Mock localStorage
-const localStorageMock: Record<string, string> = {};
-
 beforeEach(() => {
   vi.clearAllMocks();
-  Object.keys(localStorageMock).forEach(key => delete localStorageMock[key]);
+  const localStorageMock: Record<string, string> = {};
 
-  vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key) => {
+  (localStorage.getItem as unknown as ReturnType<typeof vi.fn>).mockImplementation((key: string) => {
     return localStorageMock[key] || null;
   });
 
-  vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, value) => {
+  (localStorage.setItem as unknown as ReturnType<typeof vi.fn>).mockImplementation((key: string, value: string) => {
     localStorageMock[key] = value;
   });
 });
@@ -107,5 +104,38 @@ describe('checkAchievements', () => {
     const { newlyUnlocked } = checkAchievements(mockEntries, mockTargetData, mockStats);
 
     expect(newlyUnlocked.length).toBe(0);
+  });
+
+  it('should count streaks based on unique days and allow yesterday start', () => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const twoDaysAgo = new Date(today);
+    twoDaysAgo.setDate(today.getDate() - 2);
+
+    const entries: WeightEntry[] = [
+      { date: twoDaysAgo.toISOString().split('T')[0], weekDay: 'Monday', weight: 100, changePercent: 0, changeKg: 0, dailyChange: 0 },
+      { date: yesterday.toISOString().split('T')[0], weekDay: 'Tuesday', weight: 99, changePercent: -1, changeKg: -1, dailyChange: -0.5 },
+    ];
+
+    const { newlyUnlocked } = checkAchievements(entries, mockTargetData, mockStats);
+    const weekStreak = newlyUnlocked.find(a => a.id === 'week_streak');
+    expect(weekStreak).toBeUndefined();
+  });
+
+  it('should only count early entries when recordedAt is present', () => {
+    const entries: WeightEntry[] = Array.from({ length: 10 }).map((_, i) => ({
+      date: `2025-01-${(i + 1).toString().padStart(2, '0')}`,
+      weekDay: 'Wednesday',
+      weight: 100 - i,
+      changePercent: 0,
+      changeKg: 0,
+      dailyChange: 0,
+      recordedAt: `2025-01-${(i + 1).toString().padStart(2, '0')}T08:00`,
+    }));
+
+    const { newlyUnlocked } = checkAchievements(entries, mockTargetData, mockStats);
+    const earlyBird = newlyUnlocked.find(a => a.id === 'early_bird');
+    expect(earlyBird).toBeDefined();
   });
 });

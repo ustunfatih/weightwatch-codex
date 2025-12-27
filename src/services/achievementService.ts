@@ -1,19 +1,13 @@
 import { WeightEntry, TargetData, Statistics } from '../types';
 import { Achievement, AchievementId, ACHIEVEMENTS } from '../types/achievements';
-import { differenceInDays, parseISO, isSameDay, eachDayOfInterval, getHours } from 'date-fns';
-
-const STORAGE_KEY = 'weightwatch-achievements';
+import { differenceInDays, isSameDay, eachDayOfInterval, getHours, format, subDays } from 'date-fns';
+import { STORAGE_KEYS, readJSON, writeJSON } from './storage';
+import { parseDateFlexible } from '../utils/dateUtils';
 
 // Load achievements from localStorage
 export function loadAchievements(): Achievement[] {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch (error) {
-      console.error('Failed to parse achievements:', error);
-    }
-  }
+  const stored = readJSON<Achievement[] | null>(STORAGE_KEYS.ACHIEVEMENTS, null);
+  if (stored) return stored;
 
   // Initialize with all achievements locked
   return Object.values(ACHIEVEMENTS).map(achievement => ({
@@ -24,7 +18,7 @@ export function loadAchievements(): Achievement[] {
 
 // Save achievements to localStorage
 export function saveAchievements(achievements: Achievement[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(achievements));
+  writeJSON(STORAGE_KEYS.ACHIEVEMENTS, achievements);
 }
 
 // Check and unlock new achievements
@@ -119,33 +113,26 @@ export function checkAchievements(
 function calculateCurrentStreak(entries: WeightEntry[]): number {
   if (entries.length === 0) return 0;
 
-  const sortedEntries = [...entries].sort((a, b) =>
-    parseISO(b.date).getTime() - parseISO(a.date).getTime()
-  );
+  const uniqueDays = getUniqueEntryDays(entries);
+  const sortedDays = uniqueDays
+    .map((day) => parseDateFlexible(day))
+    .filter((day): day is Date => Boolean(day))
+    .sort((a, b) => b.getTime() - a.getTime());
 
   const today = new Date();
-  const latestEntry = parseISO(sortedEntries[0].date);
+  const latestEntry = sortedDays[0];
 
   // If latest entry is not today or yesterday, streak is broken
   const daysSinceLatest = differenceInDays(today, latestEntry);
   if (daysSinceLatest > 1) return 0;
 
   let streak = 0;
-  let checkDate = today;
+  let checkDate = latestEntry;
+  const daysSet = new Set(uniqueDays);
 
-  for (const entry of sortedEntries) {
-    const entryDate = parseISO(entry.date);
-
-    if (isSameDay(entryDate, checkDate)) {
-      streak++;
-      checkDate = new Date(checkDate);
-      checkDate.setDate(checkDate.getDate() - 1);
-    } else if (entryDate < checkDate) {
-      const daysDiff = differenceInDays(checkDate, entryDate);
-      if (daysDiff > 1) {
-        break; // Streak broken
-      }
-    }
+  while (daysSet.has(format(checkDate, 'yyyy-MM-dd'))) {
+    streak++;
+    checkDate = subDays(checkDate, 1);
   }
 
   return streak;
@@ -163,15 +150,19 @@ function isPerfectWeek(entries: WeightEntry[]): boolean {
     end: today,
   });
 
+  const daysSet = new Set(getUniqueEntryDays(entries));
+
   return daysThisWeek.every(day => {
-    return entries.some(entry => isSameDay(parseISO(entry.date), day));
+    return daysSet.has(format(day, 'yyyy-MM-dd'));
   });
 }
 
 // Count entries logged before 9 AM
 function countEarlyEntries(entries: WeightEntry[]): number {
   return entries.filter(entry => {
-    const entryDate = parseISO(entry.date);
+    if (!entry.recordedAt) return false;
+    const entryDate = parseDateFlexible(entry.recordedAt);
+    if (!entryDate) return false;
     const hour = getHours(entryDate);
     return hour < 9;
   }).length;
@@ -181,16 +172,28 @@ function countEarlyEntries(entries: WeightEntry[]): number {
 function calculateConsistency(entries: WeightEntry[]): number {
   if (entries.length === 0) return 0;
 
-  const sortedEntries = [...entries].sort((a, b) =>
-    parseISO(a.date).getTime() - parseISO(b.date).getTime()
-  );
-
-  const firstEntry = parseISO(sortedEntries[0].date);
+  const uniqueDays = getUniqueEntryDays(entries).sort();
+  const firstEntry = parseDateFlexible(uniqueDays[0]);
+  if (!firstEntry) return 0;
   const today = new Date();
   const totalDays = differenceInDays(today, firstEntry) + 1;
 
-  const trackedDays = entries.length;
+  const trackedDays = uniqueDays.length;
   return totalDays > 0 ? (trackedDays / totalDays) * 100 : 0;
+}
+
+function getUniqueEntryDays(entries: WeightEntry[]): string[] {
+  const daySet = new Set<string>();
+
+  entries.forEach((entry) => {
+    const source = entry.date || entry.recordedAt;
+    if (!source) return;
+    const parsed = parseDateFlexible(source);
+    if (!parsed) return;
+    daySet.add(format(parsed, 'yyyy-MM-dd'));
+  });
+
+  return Array.from(daySet);
 }
 
 // Get achievement statistics

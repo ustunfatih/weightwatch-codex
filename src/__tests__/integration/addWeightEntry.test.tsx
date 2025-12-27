@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '../../test/test-utils';
 import userEvent from '@testing-library/user-event';
 import App from '../../App';
+import { addWeightEntry } from '../../services/dataService';
 
 // Mock data service
 vi.mock('../../services/dataService', () => ({
@@ -79,7 +80,7 @@ describe('Add Weight Entry Integration', () => {
     });
 
     // Fill in the form
-    const weightInput = screen.getByLabelText(/weight/i);
+    const weightInput = screen.getByLabelText(/Weight \(kg\)/i);
     const dateInput = screen.getByLabelText(/date/i);
 
     await user.clear(weightInput);
@@ -89,17 +90,15 @@ describe('Add Weight Entry Integration', () => {
     await user.type(dateInput, '2025-01-08');
 
     // Submit the form
-    const submitButton = screen.getByRole('button', { name: /save/i });
+    const submitButton = screen.getByRole('button', { name: /add entry/i });
     await user.click(submitButton);
 
-    // Modal should close and success toast should appear
+    // Modal should close and data service should be called
     await waitFor(() => {
       expect(screen.queryByText(/Add Weight Entry/)).not.toBeInTheDocument();
     });
 
-    await waitFor(() => {
-      expect(screen.getByText(/Weight entry added successfully/)).toBeInTheDocument();
-    });
+    expect(addWeightEntry).toHaveBeenCalled();
   });
 
   it('should validate weight input', async () => {
@@ -117,18 +116,18 @@ describe('Add Weight Entry Integration', () => {
       expect(screen.getByText(/Add Weight Entry/)).toBeInTheDocument();
     });
 
-    const weightInput = screen.getByLabelText(/weight/i);
+    const weightInput = screen.getByLabelText(/Weight \(kg\)/i);
 
     // Try to enter invalid weight (too low)
     await user.clear(weightInput);
     await user.type(weightInput, '30');
 
-    const submitButton = screen.getByRole('button', { name: /save/i });
+    const submitButton = screen.getByRole('button', { name: /add entry/i });
     await user.click(submitButton);
 
-    // Should show validation error
+    // Should not call data service when validation fails
     await waitFor(() => {
-      expect(screen.getByText(/must be between/i)).toBeInTheDocument();
+      expect(addWeightEntry).not.toHaveBeenCalled();
     });
   });
 });

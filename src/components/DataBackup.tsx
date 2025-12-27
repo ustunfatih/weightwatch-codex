@@ -4,6 +4,7 @@ import { WeightEntry, TargetData } from '../types';
 import { Achievement } from '../types/achievements';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { STORAGE_KEYS, readJSON, readString, writeJSON, writeString } from '../services/storage';
 
 interface BackupData {
     version: string;
@@ -32,8 +33,7 @@ export function DataBackup({ entries, targetData, onRestore }: DataBackupProps) 
 
         try {
             // Gather all data
-            const achievementsData = localStorage.getItem('weightwatch-achievements');
-            const achievements: Achievement[] = achievementsData ? JSON.parse(achievementsData) : [];
+            const achievements = readJSON<Achievement[]>(STORAGE_KEYS.ACHIEVEMENTS, []);
 
             const backupData: BackupData = {
                 version: '1.0.0',
@@ -42,9 +42,9 @@ export function DataBackup({ entries, targetData, onRestore }: DataBackupProps) 
                 targetData,
                 achievements,
                 settings: {
-                    theme: localStorage.getItem('weightwatch-theme') || undefined,
-                    timelineView: localStorage.getItem('weightwatch-timeline-view') || undefined,
-                    reminder: localStorage.getItem('weightwatch-reminder-settings') || undefined,
+                    theme: readString(STORAGE_KEYS.THEME) || undefined,
+                    timelineView: readString(STORAGE_KEYS.TIMELINE_VIEW) || undefined,
+                    reminder: readString(STORAGE_KEYS.REMINDER_SETTINGS) || undefined,
                 },
             };
 
@@ -93,18 +93,18 @@ export function DataBackup({ entries, targetData, onRestore }: DataBackupProps) 
 
                 // Restore achievements
                 if (backupData.achievements) {
-                    localStorage.setItem('weightwatch-achievements', JSON.stringify(backupData.achievements));
+                    writeJSON(STORAGE_KEYS.ACHIEVEMENTS, backupData.achievements);
                 }
 
                 // Restore settings
                 if (backupData.settings.theme) {
-                    localStorage.setItem('weightwatch-theme', backupData.settings.theme);
+                    writeString(STORAGE_KEYS.THEME, backupData.settings.theme);
                 }
                 if (backupData.settings.timelineView) {
-                    localStorage.setItem('weightwatch-timeline-view', backupData.settings.timelineView);
+                    writeString(STORAGE_KEYS.TIMELINE_VIEW, backupData.settings.timelineView);
                 }
                 if (backupData.settings.reminder) {
-                    localStorage.setItem('weightwatch-reminder-settings', backupData.settings.reminder);
+                    writeString(STORAGE_KEYS.REMINDER_SETTINGS, backupData.settings.reminder);
                 }
 
                 toast.success('Data restored successfully! Reloading...');
@@ -128,14 +128,14 @@ export function DataBackup({ entries, targetData, onRestore }: DataBackupProps) 
     };
 
     return (
-        <div className="backdrop-blur-md bg-white/90 dark:bg-gray-800/90 rounded-3xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
+        <div className="card-elevated p-6">
             <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                <div className="w-12 h-12 bg-[var(--accent-2)] rounded-full flex items-center justify-center">
                     <RefreshCw className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                    <h3 className="text-lg font-bold text-anthracite dark:text-white">Backup & Restore</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Protect your data</p>
+                    <h3 className="text-lg font-bold text-[var(--ink)]">Backup & Restore</h3>
+                    <p className="text-sm text-[var(--ink-muted)]">Protect your data</p>
                 </div>
             </div>
 
@@ -144,7 +144,7 @@ export function DataBackup({ entries, targetData, onRestore }: DataBackupProps) 
                 <motion.button
                     onClick={createBackup}
                     disabled={isProcessing || entries.length === 0}
-                    className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-emerald-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-primary w-full flex items-center justify-center gap-3 px-6 py-4 disabled:opacity-50 disabled:cursor-not-allowed"
                     whileHover={{ scale: entries.length > 0 ? 1.02 : 1 }}
                     whileTap={{ scale: entries.length > 0 ? 0.98 : 1 }}
                 >
@@ -164,7 +164,7 @@ export function DataBackup({ entries, targetData, onRestore }: DataBackupProps) 
                     />
                     <motion.button
                         disabled={isProcessing}
-                        className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all disabled:opacity-50"
+                        className="btn-secondary w-full flex items-center justify-center gap-3 px-6 py-4 disabled:opacity-50"
                         whileHover={{ scale: !isProcessing ? 1.02 : 1 }}
                         whileTap={{ scale: !isProcessing ? 0.98 : 1 }}
                     >
@@ -176,21 +176,21 @@ export function DataBackup({ entries, targetData, onRestore }: DataBackupProps) 
 
             {/* Info Cards */}
             <div className="mt-6 space-y-3">
-                <div className="flex items-start gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 p-3 bg-[rgba(61,90,128,0.12)] rounded-xl border border-[color:var(--accent-2)]">
+                    <CheckCircle2 className="w-5 h-5 text-[var(--accent-2)] flex-shrink-0 mt-0.5" />
                     <div>
-                        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">What's included</p>
-                        <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">
+                        <p className="text-sm font-semibold text-[var(--accent-2)]">What's included</p>
+                        <p className="text-xs text-[var(--ink)] mt-1">
                             All weight entries, goals, achievements, and settings
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
-                    <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 p-3 bg-[rgba(224,122,95,0.12)] rounded-xl border border-[color:var(--accent)]">
+                    <AlertCircle className="w-5 h-5 text-[var(--accent)] flex-shrink-0 mt-0.5" />
                     <div>
-                        <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">Important</p>
-                        <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
+                        <p className="text-sm font-semibold text-[var(--accent)]">Important</p>
+                        <p className="text-xs text-[var(--ink)] mt-1">
                             Restoring will replace all current data. Make sure to backup first!
                         </p>
                     </div>
@@ -198,8 +198,8 @@ export function DataBackup({ entries, targetData, onRestore }: DataBackupProps) 
             </div>
 
             {isProcessing && (
-                <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                <div className="mt-4 flex items-center justify-center gap-2 text-sm text-[var(--ink-muted)]">
+                    <div className="w-4 h-4 border-2 border-[var(--accent-2)] border-t-transparent rounded-full animate-spin" />
                     <span>Processing...</span>
                 </div>
             )}

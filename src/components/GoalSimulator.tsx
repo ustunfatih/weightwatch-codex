@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Target, Calendar, TrendingDown, Check, X } from 'lucide-react';
 import { TargetData } from '../types';
-import { differenceInDays, parseISO, format } from 'date-fns';
+import { differenceInDays, format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { Modal } from './Modal';
+import { parseDateFlexible } from '../utils/dateUtils';
 
 interface GoalSimulatorProps {
   currentWeight: number;
@@ -34,16 +35,15 @@ export const GoalSimulator = ({
   useEffect(() => {
     // Calculate for new target
     const totalToLose = currentWeight - targetWeight;
-    const daysRemaining = differenceInDays(parseISO(targetDate), new Date());
+    const targetDateValue = parseDateFlexible(targetDate) ?? new Date(targetDate);
+    const daysRemaining = differenceInDays(targetDateValue, new Date());
     const requiredDailyLoss = daysRemaining > 0 ? totalToLose / daysRemaining : 0;
     const requiredWeeklyLoss = requiredDailyLoss * 7;
 
     // Calculate for original target
     const originalTotalToLose = currentWeight - currentTargetData.endWeight;
-    const originalDaysRemaining = differenceInDays(
-      parseISO(currentTargetData.endDate),
-      new Date()
-    );
+    const originalEndDate = parseDateFlexible(currentTargetData.endDate) ?? new Date(currentTargetData.endDate);
+    const originalDaysRemaining = differenceInDays(originalEndDate, new Date());
     const originalDailyLoss =
       originalDaysRemaining > 0 ? originalTotalToLose / originalDaysRemaining : 0;
     const originalWeeklyLoss = originalDailyLoss * 7;
@@ -79,7 +79,10 @@ export const GoalSimulator = ({
     const newTarget: Partial<TargetData> = {
       endWeight: targetWeight,
       endDate: targetDate,
-      totalDuration: differenceInDays(parseISO(targetDate), parseISO(currentTargetData.startDate)),
+      totalDuration: differenceInDays(
+        parseDateFlexible(targetDate) ?? new Date(targetDate),
+        parseDateFlexible(currentTargetData.startDate) ?? new Date(currentTargetData.startDate)
+      ),
       totalKg: currentTargetData.startWeight - targetWeight,
     };
 
@@ -89,11 +92,11 @@ export const GoalSimulator = ({
   };
 
   const getDifficultyLevel = (dailyLoss: number): { label: string; color: string } => {
-    if (dailyLoss < 0.1) return { label: 'Very Easy', color: 'text-green-600 dark:text-green-400' };
-    if (dailyLoss < 0.2) return { label: 'Easy', color: 'text-emerald-600 dark:text-emerald-400' };
-    if (dailyLoss < 0.3) return { label: 'Moderate', color: 'text-yellow-600 dark:text-yellow-400' };
-    if (dailyLoss < 0.5) return { label: 'Challenging', color: 'text-orange-600 dark:text-orange-400' };
-    return { label: 'Very Difficult', color: 'text-red-600 dark:text-red-400' };
+    if (dailyLoss < 0.1) return { label: 'Very Easy', color: 'text-[var(--accent-2)]' };
+    if (dailyLoss < 0.2) return { label: 'Easy', color: 'text-[var(--accent-2)]' };
+    if (dailyLoss < 0.3) return { label: 'Moderate', color: 'text-[var(--accent-3)]' };
+    if (dailyLoss < 0.5) return { label: 'Challenging', color: 'text-[var(--accent)]' };
+    return { label: 'Very Difficult', color: 'text-[#b55a4a]' };
   };
 
   const currentDifficulty = getDifficultyLevel(calculations.originalDailyLoss);
@@ -104,7 +107,7 @@ export const GoalSimulator = ({
       {/* Trigger Button */}
       <motion.button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-orange-500/50 transition-all"
+        className="btn-primary flex items-center gap-2 px-4 py-2"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
@@ -116,16 +119,16 @@ export const GoalSimulator = ({
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Goal Simulator">
         <div className="space-y-6">
           {/* Current Progress Info */}
-          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-xl p-4 border border-emerald-100 dark:border-emerald-900/30">
-            <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Current Weight</div>
-            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+          <div className="bg-[var(--paper-2)] rounded-xl p-4 border border-[color:var(--border-subtle)]">
+            <div className="text-sm text-[var(--ink-muted)] mb-2">Current Weight</div>
+            <div className="text-3xl font-bold text-[var(--accent-2)]">
               {currentWeight.toFixed(1)} kg
             </div>
           </div>
 
           {/* Target Weight Slider */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--ink-muted)] mb-2">
               <Target className="inline w-4 h-4 mr-2" />
               Target Weight
             </label>
@@ -137,7 +140,7 @@ export const GoalSimulator = ({
                 step={0.1}
                 value={targetWeight}
                 onChange={e => setTargetWeight(parseFloat(e.target.value))}
-                className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                className="w-full h-2 bg-[var(--border-subtle)] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
               />
               <div className="flex items-center justify-between">
                 <input
@@ -145,9 +148,9 @@ export const GoalSimulator = ({
                   value={targetWeight}
                   onChange={e => setTargetWeight(parseFloat(e.target.value))}
                   step={0.1}
-                  className="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-anthracite dark:text-white focus:ring-2 focus:ring-emerald-500"
+                  className="w-24 px-3 py-2 border border-[color:var(--border-subtle)] rounded-xl bg-[var(--paper-3)] text-[var(--ink)] focus:ring-2 focus:ring-[color:var(--accent)]"
                 />
-                <span className="text-2xl font-bold text-anthracite dark:text-white">
+                <span className="text-2xl font-bold text-[var(--ink)]">
                   {targetWeight.toFixed(1)} kg
                 </span>
               </div>
@@ -156,7 +159,7 @@ export const GoalSimulator = ({
 
           {/* Target Date Picker */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--ink-muted)] mb-2">
               <Calendar className="inline w-4 h-4 mr-2" />
               Target Date
             </label>
@@ -165,27 +168,27 @@ export const GoalSimulator = ({
               value={targetDate}
               onChange={e => setTargetDate(e.target.value)}
               min={format(new Date(), 'yyyy-MM-dd')}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-anthracite dark:text-white focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-4 py-2 border border-[color:var(--border-subtle)] rounded-xl bg-[var(--paper-3)] text-[var(--ink)] focus:ring-2 focus:ring-[color:var(--accent)]"
             />
           </div>
 
           {/* Comparison */}
           <div className="grid grid-cols-2 gap-4">
             {/* Current Plan */}
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-              <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
+            <div className="bg-[var(--paper-2)] rounded-xl p-4 border border-[color:var(--border-subtle)]">
+              <div className="text-sm font-medium text-[var(--ink-muted)] mb-3">
                 Current Plan
               </div>
               <div className="space-y-2">
                 <div>
-                  <div className="text-xs text-gray-500 dark:text-gray-500">Daily Loss</div>
-                  <div className="text-lg font-bold text-gray-700 dark:text-gray-300">
+                  <div className="text-xs text-[var(--ink-muted)]">Daily Loss</div>
+                  <div className="text-lg font-bold text-[var(--ink)]">
                     {calculations.originalDailyLoss.toFixed(2)} kg
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500 dark:text-gray-500">Weekly Loss</div>
-                  <div className="text-lg font-bold text-gray-700 dark:text-gray-300">
+                  <div className="text-xs text-[var(--ink-muted)]">Weekly Loss</div>
+                  <div className="text-lg font-bold text-[var(--ink)]">
                     {calculations.originalWeeklyLoss.toFixed(2)} kg
                   </div>
                 </div>
@@ -196,20 +199,20 @@ export const GoalSimulator = ({
             </div>
 
             {/* New Plan */}
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-xl p-4 border-2 border-emerald-200 dark:border-emerald-800">
-              <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-3">
+            <div className="bg-[rgba(61,90,128,0.12)] rounded-xl p-4 border-2 border-[color:var(--accent-2)]">
+              <div className="text-sm font-medium text-[var(--accent-2)] mb-3">
                 New Plan
               </div>
               <div className="space-y-2">
                 <div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">Daily Loss</div>
-                  <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                  <div className="text-xs text-[var(--ink-muted)]">Daily Loss</div>
+                  <div className="text-lg font-bold text-[var(--accent-2)]">
                     {calculations.requiredDailyLoss.toFixed(2)} kg
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">Weekly Loss</div>
-                  <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                  <div className="text-xs text-[var(--ink-muted)]">Weekly Loss</div>
+                  <div className="text-lg font-bold text-[var(--accent-2)]">
                     {calculations.requiredWeeklyLoss.toFixed(2)} kg
                   </div>
                 </div>
@@ -221,13 +224,13 @@ export const GoalSimulator = ({
           </div>
 
           {/* Summary */}
-          <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-4 border border-blue-100 dark:border-blue-900/30">
+          <div className="bg-[var(--paper-2)] rounded-xl p-4 border border-[color:var(--border-subtle)]">
             <div className="flex items-start gap-3">
-              <TrendingDown className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-              <div className="flex-1 text-sm text-gray-700 dark:text-gray-300">
+              <TrendingDown className="w-5 h-5 text-[var(--accent-2)] mt-0.5" />
+              <div className="flex-1 text-sm text-[var(--ink)]">
                 <p>
                   To reach <strong>{targetWeight.toFixed(1)} kg</strong> by{' '}
-                  <strong>{format(parseISO(targetDate), 'MMM dd, yyyy')}</strong>, you need to lose{' '}
+                  <strong>{format(parseDateFlexible(targetDate) ?? new Date(targetDate), 'MMM dd, yyyy')}</strong>, you need to lose{' '}
                   <strong>{calculations.totalToLose.toFixed(1)} kg</strong> over{' '}
                   <strong>{calculations.daysRemaining} days</strong>.
                 </p>

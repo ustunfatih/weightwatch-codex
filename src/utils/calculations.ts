@@ -1,15 +1,19 @@
 import { WeightEntry, TargetData, Statistics, BMICategory } from '../types';
-import { differenceInDays, addDays, format, parseISO } from 'date-fns';
+import { differenceInDays, addDays, format } from 'date-fns';
+import { parseDateFlexible } from './dateUtils';
 
 export const BMI_CATEGORIES: BMICategory[] = [
-  { category: 'Underweight', min: 0, max: 18.5, color: '#42A5F5' },           // blue-400
-  { category: 'Normal', min: 18.5, max: 24.9, color: '#66BB6A' },             // green-400
-  { category: 'Overweight', min: 24.9, max: 29.9, color: '#FDD835' },         // yellow-600
-  { category: 'Obese', min: 29.9, max: 39.9, color: '#FB8C00' },              // orange-600
-  { category: 'Extremely Obese', min: 39.9, max: 100, color: '#E53935' },     // red-600
+  { category: 'Underweight', min: 0, max: 18.5, color: '#7AA2C7' },
+  { category: 'Normal', min: 18.5, max: 24.9, color: '#7FB38A' },
+  { category: 'Overweight', min: 25, max: 29.9, color: '#F2CC8F' },
+  { category: 'Obese', min: 30, max: 39.9, color: '#E07A5F' },
+  { category: 'Extremely Obese', min: 40, max: 100, color: '#B55A4A' },
 ];
 
 export function calculateBMI(weightKg: number, heightCm: number): number {
+  if (weightKg <= 0 || heightCm <= 0) {
+    return 0;
+  }
   const heightM = heightCm / 100;
   return weightKg / (heightM * heightM);
 }
@@ -29,7 +33,8 @@ export function getBMICategory(bmi: number): string {
 }
 
 export function getBMIColor(bmi: number): string {
-  const category = BMI_CATEGORIES.find(cat => bmi >= cat.min && bmi < cat.max);
+  const category = BMI_CATEGORIES.find(cat => bmi >= cat.min && bmi < cat.max)
+    ?? BMI_CATEGORIES.find((cat, index) => index === BMI_CATEGORIES.length - 1 && bmi >= cat.min);
   return category?.color || '#9CA3AF';
 }
 
@@ -41,10 +46,17 @@ export function calculateStatistics(
     throw new Error('No weight entries available');
   }
 
-  // Sort entries by date
-  const sortedEntries = [...entries].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+  const sortedEntries = [...entries]
+    .map(entry => ({
+      ...entry,
+      dateObj: parseDateFlexible(entry.date),
+    }))
+    .filter(entry => entry.dateObj !== null)
+    .sort((a, b) => (a.dateObj as Date).getTime() - (b.dateObj as Date).getTime());
+
+  if (sortedEntries.length === 0) {
+    throw new Error('No valid weight entries available');
+  }
 
   const lastEntry = sortedEntries[sortedEntries.length - 1];
   const currentWeight = lastEntry.weight;
@@ -58,9 +70,9 @@ export function calculateStatistics(
   const remaining = currentWeight - targetData.endWeight;
   const percentageComplete = (totalLost / targetData.totalKg) * 100;
 
-  const startDate = parseISO(targetData.startDate);
-  const endDate = parseISO(targetData.endDate);
-  const currentDate = parseISO(lastEntry.date);
+  const startDate = parseDateFlexible(targetData.startDate) ?? (sortedEntries[0].dateObj as Date);
+  const endDate = parseDateFlexible(targetData.endDate) ?? (sortedEntries[sortedEntries.length - 1].dateObj as Date);
+  const currentDate = lastEntry.dateObj as Date;
 
   const daysElapsed = differenceInDays(currentDate, startDate);
   const daysRemaining = differenceInDays(endDate, currentDate);
@@ -149,7 +161,10 @@ function groupEntriesByWeek(entries: WeightEntry[]): WeeklyData[] {
 
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
-    const daysDiff = differenceInDays(parseISO(entry.date), parseISO(weekStart));
+    const weekStartDate = weekStart ? parseDateFlexible(weekStart) : null;
+    const entryDate = parseDateFlexible(entry.date);
+    if (!weekStartDate || !entryDate) continue;
+    const daysDiff = differenceInDays(entryDate, weekStartDate);
 
     if (daysDiff >= 7) {
       if (currentWeek.length > 0) {

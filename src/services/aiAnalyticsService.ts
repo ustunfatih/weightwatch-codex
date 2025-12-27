@@ -1,5 +1,6 @@
 import { WeightEntry, TargetData } from '../types';
-import { differenceInDays, addDays, parseISO } from 'date-fns';
+import { differenceInDays, addDays } from 'date-fns';
+import { parseDateFlexible } from '../utils/dateUtils';
 
 export interface PredictiveAnalysis {
     projectedGoalDate: Date;
@@ -41,6 +42,19 @@ export interface WeeklySummary {
     recommendations: string[];
 }
 
+type ParsedEntry = WeightEntry & { dateObj: Date };
+
+function getParsedEntries(entries: WeightEntry[]): ParsedEntry[] {
+    return entries
+        .map((entry) => {
+            const dateObj = parseDateFlexible(entry.date);
+            if (!dateObj) return null;
+            return { ...entry, dateObj };
+        })
+        .filter((entry): entry is ParsedEntry => Boolean(entry))
+        .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+}
+
 /**
  * Advanced predictive analytics for goal achievement
  */
@@ -48,9 +62,20 @@ export function generatePredictiveAnalysis(
     entries: WeightEntry[],
     targetData: TargetData
 ): PredictiveAnalysis {
-    const sortedEntries = [...entries].sort((a, b) =>
-        parseISO(a.date).getTime() - parseISO(b.date).getTime()
-    );
+    const sortedEntries = getParsedEntries(entries);
+    if (sortedEntries.length === 0) {
+        return {
+            projectedGoalDate: new Date(),
+            confidenceLevel: 0,
+            recommendedPace: 0.75,
+            riskAssessment: 'moderate',
+            alternativeScenarios: {
+                conservative: { date: new Date(), weeklyLoss: 0.5 },
+                recommended: { date: new Date(), weeklyLoss: 0.75 },
+                aggressive: { date: new Date(), weeklyLoss: 1.0 },
+            },
+        };
+    }
 
     // Calculate current trend (last 14 days weighted more)
     const recentEntries = sortedEntries.slice(-14);
@@ -112,9 +137,7 @@ export function identifyPatterns(entries: WeightEntry[]): PatternInsight[] {
         return insights; // Need minimum data
     }
 
-    const sortedEntries = [...entries].sort((a, b) =>
-        parseISO(a.date).getTime() - parseISO(b.date).getTime()
-    );
+    const sortedEntries = getParsedEntries(entries);
 
     // Check for weekday patterns
     const weekdayPattern = analyzeWeekdayPattern(sortedEntries);
@@ -151,9 +174,7 @@ export function detectAnomalies(entries: WeightEntry[]): AnomalyDetection[] {
 
     if (entries.length < 5) return anomalies;
 
-    const sortedEntries = [...entries].sort((a, b) =>
-        parseISO(a.date).getTime() - parseISO(b.date).getTime()
-    );
+    const sortedEntries = getParsedEntries(entries);
 
     for (let i = 2; i < sortedEntries.length - 1; i++) {
         const current = sortedEntries[i];
@@ -199,13 +220,15 @@ export function generateWeeklySummary(
     targetData: TargetData
 ): WeeklySummary | null {
     const oneWeekAgo = addDays(new Date(), -7);
-    const weekEntries = entries.filter(e => parseISO(e.date) >= oneWeekAgo);
+    const weekEntries = entries.filter((entry) => {
+        const dateObj = parseDateFlexible(entry.date);
+        return dateObj ? dateObj >= oneWeekAgo : false;
+    });
 
     if (weekEntries.length < 2) return null;
 
-    const sortedWeek = [...weekEntries].sort((a, b) =>
-        parseISO(a.date).getTime() - parseISO(b.date).getTime()
-    );
+    const sortedWeek = getParsedEntries(weekEntries);
+    if (sortedWeek.length < 2) return null;
 
     const weekStart = sortedWeek[0].date;
     const weekEnd = sortedWeek[sortedWeek.length - 1].date;
@@ -273,13 +296,12 @@ export function generateWeeklySummary(
 function calculateWeeklyLossRate(entries: WeightEntry[]): number {
     if (entries.length < 2) return 0;
 
-    const sorted = [...entries].sort((a, b) =>
-        parseISO(a.date).getTime() - parseISO(b.date).getTime()
-    );
+    const sorted = getParsedEntries(entries);
+    if (sorted.length < 2) return 0;
 
     const daysDiff = differenceInDays(
-        parseISO(sorted[sorted.length - 1].date),
-        parseISO(sorted[0].date)
+        sorted[sorted.length - 1].dateObj,
+        sorted[0].dateObj
     );
 
     if (daysDiff === 0) return 0;
@@ -318,7 +340,9 @@ function analyzeWeekdayPattern(entries: WeightEntry[]): PatternInsight | null {
     const weekdayWeights: { [key: number]: number[] } = {};
 
     entries.forEach(e => {
-        const day = parseISO(e.date).getDay();
+        const dateObj = parseDateFlexible(e.date);
+        if (!dateObj) return;
+        const day = dateObj.getDay();
         if (!weekdayWeights[day]) weekdayWeights[day] = [];
         weekdayWeights[day].push(e.weight);
     });

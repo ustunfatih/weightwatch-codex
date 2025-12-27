@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Download, Smartphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { STORAGE_KEYS, readString, writeString } from '../services/storage';
 
 interface BeforeInstallPromptEvent extends Event {
     prompt: () => Promise<void>;
@@ -20,7 +21,7 @@ export function PWAInstallPrompt() {
         }
 
         // Check if user has already dismissed
-        const dismissed = localStorage.getItem('pwa-install-dismissed');
+        const dismissed = readString(STORAGE_KEYS.PWA_INSTALL_DISMISSED);
         const dismissedTime = dismissed ? parseInt(dismissed) : 0;
         const daysSinceDismissal = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
 
@@ -74,7 +75,7 @@ export function PWAInstallPrompt() {
     };
 
     const handleDismiss = () => {
-        localStorage.setItem('pwa-install-dismissed', Date.now().toString());
+        writeString(STORAGE_KEYS.PWA_INSTALL_DISMISSED, Date.now().toString());
         setShowPrompt(false);
     };
 
@@ -91,26 +92,26 @@ export function PWAInstallPrompt() {
                     exit={{ y: 100, opacity: 0 }}
                     className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[90] pointer-events-none"
                 >
-                    <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-emerald-200 dark:border-emerald-800 p-6 pointer-events-auto">
+                    <div className="bg-[var(--paper-3)] backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-[color:var(--border-default)] p-6 pointer-events-auto">
                         {/* Close Button */}
                         <button
                             onClick={handleDismiss}
-                            className="absolute top-4 right-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                            className="absolute top-4 right-4 p-2 hover:bg-[var(--paper-2)] rounded-full transition-colors"
                             aria-label="Dismiss"
                         >
-                            <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                            <X className="w-4 h-4 text-[var(--ink-muted)]" />
                         </button>
 
                         {/* Content */}
                         <div className="flex items-start gap-4 mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <div className="w-12 h-12 bg-[var(--accent-2)] rounded-2xl flex items-center justify-center flex-shrink-0">
                                 <Smartphone className="w-6 h-6 text-white" />
                             </div>
                             <div className="flex-1 pt-1">
-                                <h3 className="text-lg font-bold text-anthracite dark:text-white mb-1">
+                                <h3 className="text-lg font-bold text-[var(--ink)] mb-1">
                                     Install Weightwatch
                                 </h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                <p className="text-sm text-[var(--ink-muted)]">
                                     Add to your home screen for quick access and offline support!
                                 </p>
                             </div>
@@ -118,16 +119,16 @@ export function PWAInstallPrompt() {
 
                         {/* Benefits */}
                         <ul className="space-y-2 mb-4 ml-1">
-                            <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                <Smartphone className="w-4 h-4 text-emerald-600" />
+                            <li className="flex items-center gap-2 text-sm text-[var(--ink)]">
+                                <Smartphone className="w-4 h-4 text-[var(--accent-2)]" />
                                 <span>Works offline</span>
                             </li>
-                            <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                <Download className="w-4 h-4 text-emerald-600" />
+                            <li className="flex items-center gap-2 text-sm text-[var(--ink)]">
+                                <Download className="w-4 h-4 text-[var(--accent-2)]" />
                                 <span>Fast loading</span>
                             </li>
-                            <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                <Smartphone className="w-4 h-4 text-emerald-600" />
+                            <li className="flex items-center gap-2 text-sm text-[var(--ink)]">
+                                <Smartphone className="w-4 h-4 text-[var(--accent-2)]" />
                                 <span>App-like experience</span>
                             </li>
                         </ul>
@@ -136,7 +137,7 @@ export function PWAInstallPrompt() {
                         <div className="flex gap-3">
                             <motion.button
                                 onClick={handleInstall}
-                                className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-emerald-500/50 transition-all"
+                                className="btn-primary flex-1 px-4 py-3"
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                             >
@@ -144,7 +145,7 @@ export function PWAInstallPrompt() {
                             </motion.button>
                             <motion.button
                                 onClick={handleDismiss}
-                                className="px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                                className="btn-secondary px-4 py-3"
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                             >

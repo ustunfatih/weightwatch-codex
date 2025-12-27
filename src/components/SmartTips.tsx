@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbulb, X } from 'lucide-react';
 import { WeightEntry, Statistics } from '../types';
+import { STORAGE_KEYS, readJSON, writeJSON, removeKey } from '../services/storage';
 
 interface SmartTipProps {
     entries: WeightEntry[];
@@ -15,22 +16,14 @@ interface Tip {
     icon: string;
 }
 
-const TIPS_STORAGE_KEY = 'weightwatch-dismissed-tips';
-
 export function SmartTips({ entries, stats }: SmartTipProps) {
     const [currentTip, setCurrentTip] = useState<Tip | null>(null);
     const [dismissedTips, setDismissedTips] = useState<string[]>([]);
 
     useEffect(() => {
         // Load dismissed tips
-        const stored = localStorage.getItem(TIPS_STORAGE_KEY);
-        if (stored) {
-            try {
-                setDismissedTips(JSON.parse(stored));
-            } catch {
-                setDismissedTips([]);
-            }
-        }
+        const stored = readJSON<string[]>(STORAGE_KEYS.SMART_TIPS, []);
+        setDismissedTips(stored);
     }, []);
 
     useEffect(() => {
@@ -42,7 +35,7 @@ export function SmartTips({ entries, stats }: SmartTipProps) {
         if (currentTip) {
             const updated = [...dismissedTips, currentTip.id];
             setDismissedTips(updated);
-            localStorage.setItem(TIPS_STORAGE_KEY, JSON.stringify(updated));
+            writeJSON(STORAGE_KEYS.SMART_TIPS, updated);
             setCurrentTip(null);
         }
     };
@@ -55,30 +48,30 @@ export function SmartTips({ entries, stats }: SmartTipProps) {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className={`backdrop-blur-md rounded-2xl p-4 shadow-lg border ${currentTip.type === 'celebration'
-                    ? 'bg-gradient-to-r from-emerald-50/90 to-teal-50/90 dark:from-emerald-900/30 dark:to-teal-900/30 border-emerald-200 dark:border-emerald-700'
+                className={`rounded-2xl p-4 shadow-lg border ${currentTip.type === 'celebration'
+                    ? 'bg-[rgba(61,90,128,0.12)] border-[color:var(--accent-2)]'
                     : currentTip.type === 'reminder'
-                        ? 'bg-orange-50/90 dark:bg-orange-900/30 border-orange-200 dark:border-orange-700'
-                        : 'bg-blue-50/90 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700'
+                        ? 'bg-[rgba(224,122,95,0.12)] border-[color:var(--accent)]'
+                        : 'bg-[rgba(242,204,143,0.14)] border-[color:var(--accent-3)]'
                     }`}
             >
                 <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 text-2xl">{currentTip.icon}</div>
                     <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                            <Lightbulb className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
+                            <Lightbulb className="w-4 h-4 text-[var(--accent-2)]" />
+                            <span className="text-xs font-semibold text-[var(--ink-muted)] uppercase">
                                 {currentTip.type === 'celebration' ? 'Celebration' : 'Tip'}
                             </span>
                         </div>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentTip.message}</p>
+                        <p className="text-sm text-[var(--ink)]">{currentTip.message}</p>
                     </div>
                     <button
                         onClick={handleDismiss}
-                        className="flex-shrink-0 p-1 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
+                        className="flex-shrink-0 p-1 hover:bg-[rgba(255,255,255,0.6)] rounded-lg transition-colors"
                         aria-label="Dismiss tip"
                     >
-                        <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        <X className="w-4 h-4 text-[var(--ink-muted)]" />
                     </button>
                 </div>
             </motion.div>
@@ -201,5 +194,5 @@ function generateSmartTip(
 
 // Export function to reset tips (useful for testing or settings)
 export function resetSmartTips() {
-    localStorage.removeItem(TIPS_STORAGE_KEY);
+    removeKey(STORAGE_KEYS.SMART_TIPS);
 }

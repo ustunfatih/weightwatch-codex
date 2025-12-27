@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { format, eachDayOfInterval, startOfWeek, isSameDay, parseISO, differenceInDays } from 'date-fns';
+import { format, eachDayOfInterval, startOfWeek, isSameDay, differenceInDays } from 'date-fns';
 import { WeightEntry } from '../types';
+import { parseDateFlexible } from '../utils/dateUtils';
 
 interface HeatMapCalendarProps {
   entries: WeightEntry[];
@@ -8,9 +9,20 @@ interface HeatMapCalendarProps {
 }
 
 export const HeatMapCalendar = ({ entries, startDate }: HeatMapCalendarProps) => {
+  const entryByDay = useMemo(() => {
+    const map = new Map<string, WeightEntry>();
+    entries.forEach((entry) => {
+      const dateObj = parseDateFlexible(entry.date);
+      if (!dateObj) return;
+      map.set(format(dateObj, 'yyyy-MM-dd'), entry);
+    });
+    return map;
+  }, [entries]);
+
   // Generate calendar data
   const calendarData = useMemo(() => {
-    const start = parseISO(startDate);
+    const start = parseDateFlexible(startDate);
+    if (!start) return { weeks: [], days: [] };
     const today = new Date();
 
     // Start from the beginning of the week containing startDate
@@ -37,7 +49,7 @@ export const HeatMapCalendar = ({ entries, startDate }: HeatMapCalendarProps) =>
 
   // Get entry for a specific day
   const getEntryForDay = (day: Date): WeightEntry | null => {
-    return entries.find(entry => isSameDay(parseISO(entry.date), day)) || null;
+    return entryByDay.get(format(day, 'yyyy-MM-dd')) || null;
   };
 
   // Get color for a day based on whether it has an entry
@@ -46,7 +58,8 @@ export const HeatMapCalendar = ({ entries, startDate }: HeatMapCalendarProps) =>
     const today = new Date();
     const isPast = day < today;
     const isToday = isSameDay(day, today);
-    const start = parseISO(startDate);
+    const start = parseDateFlexible(startDate);
+    if (!start) return 'bg-transparent';
     const isBeforeStart = day < start;
 
     if (isBeforeStart) {
@@ -55,20 +68,20 @@ export const HeatMapCalendar = ({ entries, startDate }: HeatMapCalendarProps) =>
 
     if (entry) {
       // Has entry - show in emerald
-      return 'bg-emerald-500 dark:bg-emerald-600 hover:bg-emerald-600 dark:hover:bg-emerald-700';
+      return 'bg-[var(--accent-2)] hover:bg-[var(--accent-2)]';
     }
 
     if (isToday) {
-      return 'bg-orange-300 dark:bg-orange-700 hover:bg-orange-400 dark:hover:bg-orange-800';
+      return 'bg-[var(--accent-3)] hover:bg-[var(--accent-3)]';
     }
 
     if (isPast) {
       // Missing entry - show in red
-      return 'bg-red-200 dark:bg-red-900/50 hover:bg-red-300 dark:hover:bg-red-800';
+      return 'bg-[rgba(224,122,95,0.25)] hover:bg-[rgba(224,122,95,0.35)]';
     }
 
     // Future day - show in gray
-    return 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600';
+    return 'bg-[rgba(28,31,36,0.08)] hover:bg-[rgba(28,31,36,0.12)]';
   };
 
   // Get tooltip for a day
@@ -83,7 +96,8 @@ export const HeatMapCalendar = ({ entries, startDate }: HeatMapCalendarProps) =>
     const today = new Date();
     const isPast = day < today;
     const isToday = isSameDay(day, today);
-    const start = parseISO(startDate);
+    const start = parseDateFlexible(startDate);
+    if (!start) return `${dateStr}: Before start date`;
     const isBeforeStart = day < start;
 
     if (isBeforeStart) {
@@ -103,11 +117,20 @@ export const HeatMapCalendar = ({ entries, startDate }: HeatMapCalendarProps) =>
 
   // Calculate statistics
   const stats = useMemo(() => {
-    const start = parseISO(startDate);
+    const start = parseDateFlexible(startDate);
+    if (!start) {
+      return {
+        totalDays: 0,
+        trackedDays: 0,
+        missedDays: 0,
+        consistencyPercent: 0,
+      };
+    }
     const today = new Date();
     const totalDays = differenceInDays(today, start) + 1;
     const trackedDays = entries.filter(entry => {
-      const entryDate = parseISO(entry.date);
+      const entryDate = parseDateFlexible(entry.date);
+      if (!entryDate) return false;
       return entryDate >= start && entryDate <= today;
     }).length;
 
@@ -125,23 +148,24 @@ export const HeatMapCalendar = ({ entries, startDate }: HeatMapCalendarProps) =>
 
   return (
     <div className="card-elevated p-6">
-      <h2 className="font-display text-2xl font-black text-anthracite dark:text-white mb-6">Tracking Consistency</h2>
+      <div className="eyebrow mb-2">Consistency</div>
+      <h2 className="font-display text-2xl font-black text-[var(--ink)] mb-6">Tracking Consistency</h2>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-xl p-4 text-center border border-emerald-100 dark:border-emerald-900/30">
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.trackedDays}</div>
-          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Days Tracked</div>
+        <div className="bg-[var(--paper-2)] rounded-xl p-4 text-center border border-[color:var(--border-subtle)]">
+          <div className="text-2xl font-bold text-[var(--accent-2)]">{stats.trackedDays}</div>
+          <div className="text-xs text-[var(--ink-muted)] mt-1">Days Tracked</div>
         </div>
-        <div className="bg-red-50 dark:bg-red-950/30 rounded-xl p-4 text-center border border-red-100 dark:border-red-900/30">
-          <div className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.missedDays}</div>
-          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Days Missed</div>
+        <div className="bg-[var(--paper-2)] rounded-xl p-4 text-center border border-[color:var(--border-subtle)]">
+          <div className="text-2xl font-bold text-[var(--accent)]">{stats.missedDays}</div>
+          <div className="text-xs text-[var(--ink-muted)] mt-1">Days Missed</div>
         </div>
-        <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-4 text-center border border-blue-100 dark:border-blue-900/30">
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+        <div className="bg-[var(--paper-2)] rounded-xl p-4 text-center border border-[color:var(--border-subtle)]">
+          <div className="text-2xl font-bold text-[var(--accent-3)]">
             {stats.consistencyPercent.toFixed(0)}%
           </div>
-          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Consistency</div>
+          <div className="text-xs text-[var(--ink-muted)] mt-1">Consistency</div>
         </div>
       </div>
 
@@ -152,7 +176,7 @@ export const HeatMapCalendar = ({ entries, startDate }: HeatMapCalendarProps) =>
           <div className="flex gap-1 mb-2">
             <div className="w-6" /> {/* Spacer for alignment */}
             {weekDays.map((day, i) => (
-              <div key={i} className="w-3 text-xs text-gray-500 dark:text-gray-400 text-center">
+              <div key={i} className="w-3 text-xs text-[var(--ink-muted)] text-center">
                 {day}
               </div>
             ))}
@@ -179,12 +203,12 @@ export const HeatMapCalendar = ({ entries, startDate }: HeatMapCalendarProps) =>
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 mt-6 text-xs text-gray-600 dark:text-gray-400">
+      <div className="flex items-center gap-4 mt-6 text-xs text-[var(--ink-muted)]">
         <span>Less</span>
         <div className="flex gap-1">
-          <div className="w-3 h-3 bg-gray-200 dark:bg-gray-700 rounded-sm" title="Future" />
-          <div className="w-3 h-3 bg-red-200 dark:bg-red-900/50 rounded-sm" title="Missed" />
-          <div className="w-3 h-3 bg-emerald-500 dark:bg-emerald-600 rounded-sm" title="Tracked" />
+          <div className="w-3 h-3 bg-[rgba(28,31,36,0.08)] rounded-sm" title="Future" />
+          <div className="w-3 h-3 bg-[rgba(224,122,95,0.25)] rounded-sm" title="Missed" />
+          <div className="w-3 h-3 bg-[var(--accent-2)] rounded-sm" title="Tracked" />
         </div>
         <span>More</span>
       </div>

@@ -41,10 +41,10 @@ const iconMap: Record<string, any> = {
 };
 
 const categoryColors = {
-  milestone: 'from-purple-500 to-pink-500',
-  consistency: 'from-orange-500 to-red-500',
-  progress: 'from-emerald-500 to-teal-500',
-  special: 'from-blue-500 to-cyan-500',
+  milestone: 'from-[#3D5A80] to-[#2F4858]',
+  consistency: 'from-[#E07A5F] to-[#B55A4A]',
+  progress: 'from-[#F2CC8F] to-[#E07A5F]',
+  special: 'from-[#7AA2C7] to-[#3D5A80]',
 };
 
 export const AchievementBadge = ({
@@ -78,15 +78,15 @@ export const AchievementBadge = ({
         <motion.div
           className={`${sizeClasses[size]} rounded-full flex items-center justify-center ${
             isLocked
-              ? 'bg-gray-200 dark:bg-gray-700'
+              ? 'bg-[var(--paper-2)] border border-[color:var(--border-subtle)]'
               : `bg-gradient-to-br ${categoryColors[achievement.category]} shadow-lg`
           }`}
           animate={
             !isLocked
               ? {
                   boxShadow: [
-                    '0 0 0 0 rgba(16, 185, 129, 0)',
-                    '0 0 0 10px rgba(16, 185, 129, 0)',
+                    '0 0 0 0 rgba(61, 90, 128, 0)',
+                    '0 0 0 10px rgba(61, 90, 128, 0)',
                   ],
                 }
               : {}
@@ -98,7 +98,7 @@ export const AchievementBadge = ({
           }}
         >
           {isLocked ? (
-            <Lock className={`${iconSizes[size]} text-gray-400 dark:text-gray-500`} />
+            <Lock className={`${iconSizes[size]} text-[var(--ink-muted)]`} />
           ) : (
             <Icon className={`${iconSizes[size]} text-white`} strokeWidth={2.5} />
           )}
@@ -106,7 +106,7 @@ export const AchievementBadge = ({
 
         {/* Unlock Date Badge */}
         {!isLocked && achievement.unlockedAt && showDetails && (
-          <div className="absolute -bottom-2 -right-2 bg-white dark:bg-gray-800 rounded-full px-2 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border-2 border-emerald-500 shadow-md">
+          <div className="absolute -bottom-2 -right-2 bg-[var(--paper-3)] rounded-full px-2 py-1 text-xs font-semibold text-[var(--accent-2)] border-2 border-[var(--accent-2)] shadow-md">
             {format(parseISO(achievement.unlockedAt), 'MMM dd')}
           </div>
         )}
@@ -118,8 +118,8 @@ export const AchievementBadge = ({
           <h3
             className={`font-bold text-sm ${
               isLocked
-                ? 'text-gray-400 dark:text-gray-500'
-                : 'text-anthracite dark:text-white'
+                ? 'text-[var(--ink-muted)]'
+                : 'text-[var(--ink)]'
             }`}
           >
             {achievement.title}
@@ -127,14 +127,14 @@ export const AchievementBadge = ({
           <p
             className={`text-xs mt-1 ${
               isLocked
-                ? 'text-gray-400 dark:text-gray-600'
-                : 'text-gray-600 dark:text-gray-400'
+                ? 'text-[var(--ink-muted)]'
+                : 'text-[var(--ink-muted)]'
             }`}
           >
             {achievement.description}
           </p>
           {isLocked && (
-            <div className="mt-2 text-xs font-semibold text-gray-500 dark:text-gray-500">
+            <div className="mt-2 text-xs font-semibold text-[var(--ink-muted)]">
               🔒 Locked
             </div>
           )}

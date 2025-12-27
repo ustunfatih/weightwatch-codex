@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { Trophy, Flame, Star, CheckCircle, Zap } from 'lucide-react';
 import { Statistics } from '../types';
 import { formatWeightLoss } from '../utils/calculations';
+import { parseDateFlexible } from '../utils/dateUtils';
 
 interface StatisticsPanelProps {
   stats: Statistics;
@@ -47,18 +48,16 @@ const StatisticsPanelComponent: React.FC<StatisticsPanelProps> = ({ stats }) => 
 
   return (
     <div className="card-elevated p-6">
-      <h2 className="font-display text-2xl font-black text-anthracite dark:text-white mb-6">Performance Breakdown</h2>
+      <div className="eyebrow mb-2">Performance</div>
+      <h2 className="font-display text-2xl font-black text-[var(--ink)] mb-6">Performance Breakdown</h2>
 
       {/* Time Frame Selector */}
-      <div className="flex gap-2 mb-6 bg-gray-50 dark:bg-gray-800 p-1 rounded-2xl border border-gray-200 dark:border-gray-700">
+      <div className="segmented flex gap-2 mb-6">
         {timeFrames.map((frame) => (
           <button
             key={frame.value}
             onClick={() => setSelectedFrame(frame.value)}
-            className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-all ${selectedFrame === frame.value
-              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/30'
-              : 'text-gray-600 dark:text-gray-400 hover:text-anthracite dark:hover:text-white'
-              }`}
+            className={`segmented-btn flex-1 ${selectedFrame === frame.value ? 'active' : ''}`}
           >
             {frame.label}
           </button>
@@ -67,33 +66,33 @@ const StatisticsPanelComponent: React.FC<StatisticsPanelProps> = ({ stats }) => 
 
       {/* Comparison Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-2xl p-5 border border-emerald-100 dark:border-emerald-900/30">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Your Actual</div>
-          <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">{formatWeightLoss(currentValue)}</div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">Average per {selectedFrame.slice(0, -2)}</div>
+        <div className="rounded-2xl p-5 border border-[color:var(--border-subtle)] bg-[var(--paper-2)]">
+          <div className="text-sm text-[var(--ink-muted)] mb-1">Your Actual</div>
+          <div className="text-3xl font-bold text-[var(--accent-2)] mb-2">{formatWeightLoss(currentValue)}</div>
+          <div className="text-xs text-[var(--ink-muted)]">Average per {selectedFrame.slice(0, -2)}</div>
         </div>
 
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/30 rounded-2xl p-5 border border-orange-100 dark:border-orange-900/30">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Target Required</div>
-          <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-2">
+        <div className="rounded-2xl p-5 border border-[color:var(--border-subtle)] bg-[var(--paper-2)]">
+          <div className="text-sm text-[var(--ink-muted)] mb-1">Target Required</div>
+          <div className="text-3xl font-bold text-[var(--accent)] mb-2">
             {formatWeightLoss(requiredValue)}
           </div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">Needed per {selectedFrame.slice(0, -2)}</div>
+          <div className="text-xs text-[var(--ink-muted)]">Needed per {selectedFrame.slice(0, -2)}</div>
         </div>
       </div>
 
       {/* Status Indicator */}
       <div
         className={`rounded-2xl p-5 transition-all ${isAhead
-          ? 'bg-emerald-50 dark:bg-emerald-950/30 border-2 border-emerald-400 dark:border-emerald-600'
-          : 'bg-orange-50 dark:bg-orange-950/30 border-2 border-orange-400 dark:border-orange-600'
+          ? 'bg-[rgba(61,90,128,0.12)] border-2 border-[color:var(--accent-2)]'
+          : 'bg-[rgba(224,122,95,0.12)] border-2 border-[color:var(--accent)]'
           }`}
       >
         <div className="flex items-center gap-3">
           <div
             className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg ${isAhead
-              ? 'bg-gradient-to-br from-emerald-500 to-teal-500'
-              : 'bg-gradient-to-br from-orange-500 to-orange-600'
+              ? 'bg-[var(--accent-2)]'
+              : 'bg-[var(--accent)]'
               }`}
           >
             {isAhead ? (
@@ -103,10 +102,10 @@ const StatisticsPanelComponent: React.FC<StatisticsPanelProps> = ({ stats }) => 
             )}
           </div>
           <div className="flex-1">
-            <div className="font-bold text-anthracite dark:text-white">
+            <div className="font-bold text-[var(--ink)]">
               {isAhead ? 'Exceeding Target!' : 'Below Target Pace'}
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm text-[var(--ink-muted)]">
               {isAhead
                 ? `You're losing ${formatWeightLoss(Math.abs(currentValue) - Math.abs(requiredValue))} more than needed`
                 : `Need to increase by ${formatWeightLoss(Math.abs(requiredValue) - Math.abs(currentValue))}`}
@@ -117,40 +116,40 @@ const StatisticsPanelComponent: React.FC<StatisticsPanelProps> = ({ stats }) => 
 
       {/* Performance Highlights */}
       <div className="mt-6 space-y-3">
-        <h3 className="font-bold text-anthracite dark:text-white">Performance Highlights</h3>
+        <h3 className="font-bold text-[var(--ink)]">Performance Highlights</h3>
 
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/30 rounded-xl p-4 flex items-center gap-3 border border-purple-100 dark:border-purple-900/30 hover:shadow-md transition-all">
-          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+        <div className="rounded-xl p-4 flex items-center gap-3 border border-[color:var(--border-subtle)] bg-[var(--paper-2)] hover:shadow-md transition-all">
+          <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg bg-[var(--accent-2)]">
             <Trophy className="w-5 h-5 text-white" strokeWidth={2.5} />
           </div>
           <div className="flex-1">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Best Single Drop</div>
-            <div className="font-bold text-anthracite dark:text-white">
+            <div className="text-sm text-[var(--ink-muted)]">Best Single Drop</div>
+            <div className="font-bold text-[var(--ink)]">
               {formatWeightLoss(Math.abs(stats.performance.bestDay.loss))} on{' '}
-              {format(new Date(stats.performance.bestDay.date), 'MMM dd')}
+              {formatDateFlexible(stats.performance.bestDay.date)}
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl p-4 flex items-center gap-3 border border-cyan-100 dark:border-cyan-900/30 hover:shadow-md transition-all">
-          <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center shadow-lg">
+        <div className="rounded-xl p-4 flex items-center gap-3 border border-[color:var(--border-subtle)] bg-[var(--paper-2)] hover:shadow-md transition-all">
+          <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg bg-[var(--accent-3)]">
             <Flame className="w-5 h-5 text-white" strokeWidth={2.5} />
           </div>
           <div className="flex-1">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Longest Streak</div>
-            <div className="font-bold text-anthracite dark:text-white">{stats.performance.longestStreak} days</div>
+            <div className="text-sm text-[var(--ink-muted)]">Longest Streak</div>
+            <div className="font-bold text-[var(--ink)]">{stats.performance.longestStreak} days</div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/30 dark:to-orange-950/30 rounded-xl p-4 flex items-center gap-3 border border-yellow-100 dark:border-yellow-900/30 hover:shadow-md transition-all">
-          <div className="w-10 h-10 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+        <div className="rounded-xl p-4 flex items-center gap-3 border border-[color:var(--border-subtle)] bg-[var(--paper-2)] hover:shadow-md transition-all">
+          <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg bg-[var(--accent)]">
             <Star className="w-5 h-5 text-white" strokeWidth={2.5} />
           </div>
           <div className="flex-1">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Best Week</div>
-            <div className="font-bold text-anthracite dark:text-white">
+            <div className="text-sm text-[var(--ink-muted)]">Best Week</div>
+            <div className="font-bold text-[var(--ink)]">
               {formatWeightLoss(Math.abs(stats.performance.bestWeek.loss))} (Week of{' '}
-              {format(new Date(stats.performance.bestWeek.weekStart), 'MMM dd')})
+              {formatDateFlexible(stats.performance.bestWeek.weekStart)})
             </div>
           </div>
         </div>
@@ -161,3 +160,9 @@ const StatisticsPanelComponent: React.FC<StatisticsPanelProps> = ({ stats }) => 
 
 // Memoize component to prevent unnecessary re-renders
 export const StatisticsPanel = React.memo(StatisticsPanelComponent);
+
+function formatDateFlexible(value: string): string {
+  const parsed = parseDateFlexible(value);
+  if (parsed) return format(parsed, 'MMM dd');
+  return value;
+}

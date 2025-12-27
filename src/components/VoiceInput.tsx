@@ -100,7 +100,7 @@ export function VoiceInput({ onWeightDetected }: VoiceInputProps) {
             onClick={isListening ? stopListening : startListening}
             className={`p-3 rounded-xl transition-all ${isListening
                     ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
-                    : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                    : 'bg-[var(--paper-2)] hover:bg-[var(--paper-3)] text-[var(--ink-muted)] border border-[color:var(--border-subtle)]'
                 }`}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

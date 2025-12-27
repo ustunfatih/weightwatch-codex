@@ -111,7 +111,7 @@ export async function generateShareImage(
   const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
   gradient.addColorStop(0, '#10b981'); // emerald-500
   gradient.addColorStop(0.5, '#14b8a6'); // teal-500
-  gradient.addColorStop(1, '#06b6d4'); // cyan-500
+  gradient.addColorStop(1, '#0ea5e9'); // sky-500
 
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -122,30 +122,30 @@ export async function generateShareImage(
 
   // Title
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 60px Inter, sans-serif';
+  ctx.font = '700 60px Clearface, Georgia, serif';
   ctx.textAlign = 'center';
   ctx.fillText('My Weight Loss Journey', canvas.width / 2, 100);
 
   // Stats
-  ctx.font = 'bold 80px Inter, sans-serif';
+  ctx.font = '700 80px Clearface, Georgia, serif';
   ctx.fillText(`${stats.progress.totalLost.toFixed(1)} kg`, canvas.width / 2, 250);
 
-  ctx.font = '40px Inter, sans-serif';
+  ctx.font = '500 40px Apercu, sans-serif';
   ctx.fillText('Total Weight Lost', canvas.width / 2, 310);
 
   // Progress
-  ctx.font = 'bold 60px Inter, sans-serif';
+  ctx.font = '700 60px Clearface, Georgia, serif';
   ctx.fillText(
     `${stats.progress.percentageComplete.toFixed(0)}%`,
     canvas.width / 2,
     420
   );
 
-  ctx.font = '40px Inter, sans-serif';
+  ctx.font = '500 40px Apercu, sans-serif';
   ctx.fillText('Progress to Goal', canvas.width / 2, 480);
 
   // Footer
-  ctx.font = '30px Inter, sans-serif';
+  ctx.font = '400 30px Apercu, sans-serif';
   ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
   ctx.fillText('Track your journey with Weightwatch', canvas.width / 2, 580);
 

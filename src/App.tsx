@@ -14,14 +14,14 @@ import { SkeletonDashboard } from './components/SkeletonLoaders';
 import { Modal } from './components/Modal';
 import { WeightEntryForm } from './components/WeightEntryForm';
 import { SkipToContent } from './components/SkipToContent';
-import { LoadingFallback } from './components/LoadingFallback';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { staggerContainer, staggerItem } from './utils/animations';
 import { Achievement } from './types/achievements';
 import { checkAchievements, loadAchievements } from './services/achievementService';
+import { STORAGE_KEYS, readString } from './services/storage';
+import { parseDateFlexible } from './utils/dateUtils';
 
 // Lazy load heavy components that aren't immediately visible
-const HeatMapCalendar = lazy(() => import('./components/HeatMapCalendar').then(m => ({ default: m.HeatMapCalendar })));
 const Settings = lazy(() => import('./components/Settings').then(m => ({ default: m.Settings })));
 const AchievementsGallery = lazy(() => import('./components/AchievementsGallery').then(m => ({ default: m.AchievementsGallery })));
 const CelebrationModal = lazy(() => import('./components/CelebrationModal').then(m => ({ default: m.CelebrationModal })));
@@ -30,7 +30,6 @@ const GoalSimulator = lazy(() => import('./components/GoalSimulator').then(m => 
 const TrendsPage = lazy(() => import('./components/TrendsPage').then(m => ({ default: m.TrendsPage })));
 const OnboardingModal = lazy(() => import('./components/OnboardingModal').then(m => ({ default: m.OnboardingModal })));
 const SmartTips = lazy(() => import('./components/SmartTips').then(m => ({ default: m.SmartTips })));
-const AIInsights = lazy(() => import('./components/AIInsights').then(m => ({ default: m.AIInsights })));
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -47,7 +46,12 @@ function App() {
   // Memoize statistics calculation - only recalculate when entries or targetData change
   const stats = useMemo<Statistics | null>(() => {
     if (entries.length === 0 || !targetData) return null;
-    return calculateStatistics(entries, targetData);
+    try {
+      return calculateStatistics(entries, targetData);
+    } catch (err) {
+      console.error('Failed to calculate statistics:', err);
+      return null;
+    }
   }, [entries, targetData]);
 
   // Load data function - can be called on mount and after sync
@@ -77,7 +81,7 @@ function App() {
     setAchievements(loadAchievements());
 
     // Check if onboarding should be shown
-    const onboardingCompleted = localStorage.getItem('weightwatch-onboarding-completed');
+    const onboardingCompleted = readString(STORAGE_KEYS.ONBOARDING_COMPLETED);
     if (!onboardingCompleted) {
       setShowOnboarding(true);
     }
@@ -165,18 +169,18 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-emerald-50/20 to-teal-50/20 dark:from-gray-900 dark:via-emerald-950/20 dark:to-teal-950/20 relative">
+      <div className="app-shell">
 
         {/* Header Skeleton */}
-        <header className="relative z-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 sticky top-0">
+        <header className="relative z-10 masthead sticky top-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Scale className="w-8 h-8 text-emerald-500 animate-pulse" strokeWidth={2.5} />
-                <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <Scale className="w-8 h-8 text-[var(--accent-2)] animate-pulse" strokeWidth={2.5} />
+                <div className="h-8 w-48 bg-[var(--border-subtle)] rounded animate-pulse" />
               </div>
               <div className="flex items-center gap-4">
-                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-4 w-32 bg-[var(--border-subtle)] rounded animate-pulse" />
                 <ThemeToggle />
               </div>
             </div>
@@ -193,16 +197,16 @@ function App() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-emerald-50/20 to-teal-50/20 dark:from-gray-900 dark:via-emerald-950/20 dark:to-teal-950/20">
+      <div className="app-shell flex items-center justify-center">
         <div className="max-w-md mx-auto text-center p-8">
           <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-4xl">⚠️</span>
           </div>
-          <h2 className="text-2xl font-bold text-anthracite dark:text-gray-100 mb-3">Oops! Something went wrong</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
+          <h2 className="text-2xl font-bold text-[var(--ink)] mb-3">Oops! Something went wrong</h2>
+          <p className="text-[var(--ink-muted)] mb-6">{error}</p>
           <button
             onClick={handleRetry}
-            className="px-6 py-3 bg-emerald-500 text-white font-semibold rounded-xl hover:bg-emerald-600 transition-all hover:shadow-lg hover:shadow-emerald-500/50"
+            className="btn-primary"
           >
             Try Again
           </button>
@@ -213,28 +217,28 @@ function App() {
 
   if (!stats || !targetData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-emerald-50/20 to-teal-50/20 dark:from-gray-900 dark:via-emerald-950/20 dark:to-teal-950/20">
+      <div className="app-shell flex items-center justify-center">
         <div className="text-center">
-          <p className="text-anthracite dark:text-gray-100 font-medium">No data available</p>
+          <p className="text-[var(--ink)] font-medium">No data available</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-emerald-50/20 to-teal-50/20 dark:from-gray-900 dark:via-emerald-950/20 dark:to-teal-950/20 relative">
+    <div className="app-shell">
       <SkipToContent />
 
       {/* Header - Redesigned with compact height and refined styling */}
-      <header className="sticky top-0 z-50 glass border-b border-gray-100 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <header className="sticky top-0 z-50 masthead">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <h1 className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-sm">
-                <Scale className="w-5 h-5 text-white" strokeWidth={2.5} />
+              <div className="w-10 h-10 rounded-2xl bg-[var(--ink)] text-[var(--paper-3)] flex items-center justify-center shadow-sm border border-[color:var(--border-subtle)]">
+                <Scale className="w-5 h-5" strokeWidth={2.5} />
               </div>
-              <span className="font-display text-2xl text-anthracite dark:text-white">
+              <span className="font-display text-2xl text-[var(--ink)]">
                 Weightwatch
               </span>
             </h1>
@@ -242,12 +246,17 @@ function App() {
             {/* Actions */}
             <div className="flex items-center gap-1.5 md:gap-2">
               {/* Last updated - hidden on mobile */}
-              <div className="hidden sm:flex items-center px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500 dark:text-gray-400">
-                Updated {new Date(entries[entries.length - 1].date).toLocaleDateString()}
+              <div className="hidden sm:flex items-center px-3 py-1.5 rounded-full bg-[var(--paper-2)] text-xs text-[var(--ink-muted)] border border-[color:var(--border-subtle)]">
+                {(() => {
+                  const lastDate = entries[entries.length - 1]?.date;
+                  const parsed = lastDate ? parseDateFlexible(lastDate) : null;
+                  const display = parsed ? parsed.toLocaleDateString() : lastDate || '';
+                  return `Updated ${display}`;
+                })()}
               </div>
 
               {/* Divider */}
-              <div className="hidden sm:block w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+              <div className="hidden sm:block w-px h-6 bg-[var(--border-subtle)] mx-1" />
 
               {/* Goal Simulator - hidden on smaller screens */}
               <div className="hidden lg:block">
@@ -279,7 +288,7 @@ function App() {
                 title="View detailed analytics"
                 aria-label="View detailed analytics"
               >
-                <TrendingUp className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <TrendingUp className="w-5 h-5 text-[var(--ink-muted)]" />
               </button>
 
               {/* Settings */}
@@ -307,7 +316,7 @@ function App() {
         id="main-content"
         role="main"
         aria-label="Dashboard content"
-        className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+        className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10"
         variants={staggerContainer}
         initial="initial"
         animate="animate"
@@ -350,30 +359,8 @@ function App() {
           <StatisticsPanel stats={stats} />
         </motion.section>
 
-        {/* AI Insights */}
-        <motion.section
-          className="mb-8"
-          variants={staggerItem}
-          aria-label="AI-powered insights"
-        >
-          <Suspense fallback={<LoadingFallback />}>
-            <AIInsights entries={entries} targetData={targetData} stats={stats} />
-          </Suspense>
-        </motion.section>
-
-        {/* Heat Map Calendar */}
-        <motion.section
-          className="mb-8"
-          variants={staggerItem}
-          aria-label="Tracking consistency calendar"
-        >
-          <Suspense fallback={<LoadingFallback />}>
-            <HeatMapCalendar entries={entries} startDate={targetData.startDate} />
-          </Suspense>
-        </motion.section>
-
         {/* Footer */}
-        <motion.footer className="text-center text-gray-500 dark:text-gray-400 text-sm py-8" variants={staggerItem}>
+        <motion.footer className="text-center text-[var(--ink-muted)] text-sm py-8" variants={staggerItem}>
           <p>Built with ❤️ using React & TypeScript</p>
           <p className="mt-2">Keep pushing towards your goals! 💪</p>
         </motion.footer>

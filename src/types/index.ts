@@ -5,6 +5,7 @@ export interface WeightEntry {
   changePercent: number;
   changeKg: number;
   dailyChange: number;
+  recordedAt?: string; // Local datetime (YYYY-MM-DDTHH:mm) for time-of-day tracking
 }
 
 export interface TargetData {

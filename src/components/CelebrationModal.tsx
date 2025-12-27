@@ -71,7 +71,7 @@ export const CelebrationModal = ({ achievement, onClose }: CelebrationModalProps
 
         {/* Modal Content */}
         <motion.div
-          className="relative bg-white dark:bg-gray-800 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl"
+          className="relative bg-[var(--paper-3)] rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl border border-[color:var(--border-default)]"
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
           exit={{ scale: 0, rotate: 180 }}
@@ -84,9 +84,9 @@ export const CelebrationModal = ({ achievement, onClose }: CelebrationModalProps
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-xl bg-[var(--paper-2)] hover:bg-[var(--paper-3)] transition-colors"
           >
-            <X className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+            <X className="w-5 h-5 text-[var(--ink-muted)]" />
           </button>
 
           {/* Content */}
@@ -98,10 +98,10 @@ export const CelebrationModal = ({ achievement, onClose }: CelebrationModalProps
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              <h2 className="text-3xl font-bold text-anthracite dark:text-white mb-2">
+              <h2 className="text-3xl font-bold text-[var(--ink)] mb-2">
                 🎉 Achievement Unlocked! 🎉
               </h2>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-[var(--ink-muted)]">
                 Congratulations on your progress!
               </p>
             </motion.div>
@@ -122,12 +122,12 @@ export const CelebrationModal = ({ achievement, onClose }: CelebrationModalProps
 
             {/* Motivational Message */}
             <motion.div
-              className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-xl p-4 border border-emerald-100 dark:border-emerald-900/30"
+              className="bg-[rgba(61,90,128,0.12)] rounded-xl p-4 border border-[color:var(--accent-2)]"
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.6 }}
             >
-              <p className="text-sm text-gray-700 dark:text-gray-300">
+              <p className="text-sm text-[var(--ink)]">
                 {getMotivationalMessage(achievement.category)}
               </p>
             </motion.div>
@@ -135,7 +135,7 @@ export const CelebrationModal = ({ achievement, onClose }: CelebrationModalProps
             {/* Continue Button */}
             <motion.button
               onClick={onClose}
-              className="mt-6 w-full px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-emerald-500/50 transition-all"
+              className="btn-primary mt-6 w-full"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               initial={{ y: 50, opacity: 0 }}

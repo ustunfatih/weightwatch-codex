@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { STORAGE_KEYS, readString, writeString } from '../services/storage';
 
 type Theme = 'light' | 'dark';
 
@@ -12,7 +13,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     // Check localStorage for saved theme preference
-    const savedTheme = localStorage.getItem('weightwatch-theme');
+    const savedTheme = readString(STORAGE_KEYS.THEME);
     if (savedTheme === 'dark' || savedTheme === 'light') {
       return savedTheme;
     }
@@ -32,7 +33,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       root.classList.remove('dark');
     }
     // Save to localStorage
-    localStorage.setItem('weightwatch-theme', theme);
+    writeString(STORAGE_KEYS.THEME, theme);
   }, [theme]);
 
   const toggleTheme = () => {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Bell, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { STORAGE_KEYS, readJSON, writeJSON, readString } from '../services/storage';
 
 interface ReminderSettings {
     enabled: boolean;
@@ -8,12 +9,10 @@ interface ReminderSettings {
     skipWeekends: boolean;
 }
 
-const STORAGE_KEY = 'weightwatch-reminder-settings';
-
 export function DailyReminder() {
     const [settings, setSettings] = useState<ReminderSettings>(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        return saved ? JSON.parse(saved) : {
+        const saved = readJSON<ReminderSettings | null>(STORAGE_KEYS.REMINDER_SETTINGS, null);
+        return saved || {
             enabled: false,
             time: '09:00',
             skipWeekends: false,
@@ -31,7 +30,7 @@ export function DailyReminder() {
 
     useEffect(() => {
         // Save settings
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+        writeJSON(STORAGE_KEYS.REMINDER_SETTINGS, settings);
     }, [settings]);
 
     useEffect(() => {
@@ -56,7 +55,7 @@ export function DailyReminder() {
 
             if (timeDiff < 60000) { // Within 1 minute
                 // Check if already logged today
-                const lastEntry = localStorage.getItem('weightwatch-last-entry-date');
+                const lastEntry = readString(STORAGE_KEYS.LAST_ENTRY_DATE);
                 const today = now.toISOString().split('T')[0];
 
                 if (lastEntry !== today) {
@@ -110,23 +109,23 @@ export function DailyReminder() {
     };
 
     return (
-        <div className="backdrop-blur-md bg-white/90 dark:bg-gray-800/90 rounded-3xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
+        <div className="card-elevated p-6">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
+                    <div className="w-12 h-12 bg-[var(--accent-2)] rounded-full flex items-center justify-center">
                         <Bell className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-anthracite dark:text-white">Daily Reminder</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Never miss a weigh-in</p>
+                        <h3 className="text-lg font-bold text-[var(--ink)]">Daily Reminder</h3>
+                        <p className="text-sm text-[var(--ink-muted)]">Never miss a weigh-in</p>
                     </div>
                 </div>
 
                 <button
                     onClick={toggleReminder}
                     className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${settings.enabled && permission === 'granted'
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-                        : 'bg-gray-300 dark:bg-gray-600'
+                        ? 'bg-[var(--accent)]'
+                        : 'bg-[var(--border-subtle)]'
                         }`}
                 >
                     <span
@@ -137,29 +136,29 @@ export function DailyReminder() {
             </div>
 
             {settings.enabled && permission === 'granted' && (
-                <div className="space-y-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="space-y-4 mt-4 pt-4 border-t border-[color:var(--border-subtle)]">
                     {/* Time Selector */}
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                            <span className="text-sm text-gray-600 dark:text-gray-400">Reminder Time</span>
+                            <Clock className="w-4 h-4 text-[var(--ink-muted)]" />
+                            <span className="text-sm text-[var(--ink-muted)]">Reminder Time</span>
                         </div>
                         <input
                             type="time"
                             value={settings.time}
                             onChange={(e) => setSettings(prev => ({ ...prev, time: e.target.value }))}
-                            className="px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            className="px-3 py-2 rounded-xl bg-[var(--paper-2)] border border-[color:var(--border-subtle)] text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
                         />
                     </div>
 
                     {/* Skip Weekends */}
                     <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Skip weekends</span>
+                        <span className="text-sm text-[var(--ink-muted)]">Skip weekends</span>
                         <button
                             onClick={() => setSettings(prev => ({ ...prev, skipWeekends: !prev.skipWeekends }))}
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.skipWeekends
-                                ? 'bg-emerald-500'
-                                : 'bg-gray-300 dark:bg-gray-600'
+                                ? 'bg-[var(--accent-2)]'
+                                : 'bg-[var(--border-subtle)]'
                                 }`}
                         >
                             <span
@@ -172,16 +171,16 @@ export function DailyReminder() {
             )}
 
             {permission === 'denied' && (
-                <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
-                    <p className="text-sm text-orange-700 dark:text-orange-400">
+                <div className="mt-4 p-3 bg-[rgba(224,122,95,0.12)] rounded-xl border border-[color:var(--accent)]">
+                    <p className="text-sm text-[var(--accent)]">
                         Notifications are blocked. Please enable them in your browser settings.
                     </p>
                 </div>
             )}
 
             {!('Notification' in window) && (
-                <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700/20 rounded-xl border border-gray-200 dark:border-gray-600">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="mt-4 p-3 bg-[var(--paper-2)] rounded-xl border border-[color:var(--border-subtle)]">
+                    <p className="text-sm text-[var(--ink-muted)]">
                         Notifications are not supported in this browser.
                     </p>
                 </div>

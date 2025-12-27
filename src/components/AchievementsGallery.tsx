@@ -29,7 +29,7 @@ export const AchievementsGallery = ({ achievements }: AchievementsGalleryProps) 
       {/* Trigger Button */}
       <motion.button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-purple-500/50 transition-all"
+        className="btn-primary flex items-center gap-2 px-4 py-2"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
@@ -48,25 +48,25 @@ export const AchievementsGallery = ({ achievements }: AchievementsGalleryProps) 
       >
         <div className="space-y-6">
           {/* Stats Overview */}
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 rounded-xl p-4 border border-purple-100 dark:border-purple-900/30">
+          <div className="bg-[var(--paper-2)] rounded-xl p-4 border border-[color:var(--border-subtle)]">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="text-lg font-bold text-anthracite dark:text-white">
+                <h3 className="text-lg font-bold text-[var(--ink)]">
                   Progress Overview
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-[var(--ink-muted)]">
                   {stats.unlocked} of {stats.total} achievements unlocked
                 </p>
               </div>
-              <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+              <div className="text-3xl font-bold text-[var(--accent-2)]">
                 {stats.percentComplete.toFixed(0)}%
               </div>
             </div>
 
             {/* Progress Bar */}
-            <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div className="w-full h-3 bg-[var(--border-subtle)] rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                className="h-full bg-[var(--accent-2)]"
                 initial={{ width: 0 }}
                 animate={{ width: `${stats.percentComplete}%` }}
                 transition={{ duration: 1, ease: 'easeOut' }}
@@ -84,8 +84,8 @@ export const AchievementsGallery = ({ achievements }: AchievementsGalleryProps) 
                   onClick={() => setFilter(option as any)}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                     filter === option
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-[var(--ink)] text-[var(--paper-3)] shadow-md'
+                      : 'bg-[var(--paper-2)] text-[var(--ink-muted)] hover:bg-[var(--paper-3)]'
                   }`}
                 >
                   {option.charAt(0).toUpperCase() + option.slice(1)}
@@ -101,8 +101,8 @@ export const AchievementsGallery = ({ achievements }: AchievementsGalleryProps) 
                   onClick={() => setCategoryFilter(category)}
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                     categoryFilter === category
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-[var(--accent)] text-white'
+                      : 'bg-[var(--paper-2)] text-[var(--ink-muted)] hover:bg-[var(--paper-3)]'
                   }`}
                 >
                   {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -125,7 +125,7 @@ export const AchievementsGallery = ({ achievements }: AchievementsGalleryProps) 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3"
+                className="bg-[var(--paper-2)] rounded-xl p-3 border border-[color:var(--border-subtle)]"
               >
                 <AchievementBadge
                   achievement={achievement}
@@ -138,7 +138,7 @@ export const AchievementsGallery = ({ achievements }: AchievementsGalleryProps) 
 
           {/* Empty State */}
           {filteredAchievements.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <div className="text-center py-8 text-[var(--ink-muted)]">
               <Award className="w-12 h-12 mx-auto mb-2 opacity-50" />
               <p>No achievements found with current filters</p>
             </div>
@@ -147,7 +147,7 @@ export const AchievementsGallery = ({ achievements }: AchievementsGalleryProps) 
           {/* Close Button */}
           <motion.button
             onClick={() => setIsOpen(false)}
-            className="w-full px-4 py-3 bg-gray-200 dark:bg-gray-700 text-anthracite dark:text-white font-semibold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+            className="btn-secondary w-full"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
