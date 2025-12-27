@@ -198,6 +198,25 @@
 - [x] Add voice input for weight entry (Web Speech API)
 - [x] Create VoiceInput component with natural language processing
 - [x] Integrate voice input into WeightEntryForm
+
+---
+
+### **PHASE 6: Analytics Enrichment + Sync Reliability** ✅ COMPLETED
+
+**Goal:** Elevate analytics depth, reorganize insights, and harden Google Sheets sync.
+
+#### Task 6.1: Advanced Analytics Overhaul ✅
+- [x] Move deep insights (AI Insights + Heatmap) to Advanced Analytics
+- [x] Add weekly momentum (delta bars) visualization
+- [x] Add consistency/volatility metrics with change-point detection
+- [x] Add time-of-day weight patterns (AM/PM/Evening/Night)
+
+#### Task 6.2: Google Sheets Reliability ✅
+- [x] Schema validation with header mapping (Date/Weight required)
+- [x] Recorded time support in Weight Data sheet
+- [x] OAuth token handling + improved error reporting
+- [x] Continuous sync optimizations (diff hash + focus refresh)
+- [x] Auto-sync local edits to Sheets when connected
 - [x] Add smart insights generation based on user patterns
 - [x] Add tips and recommendations system with localStorage persistence
 
@@ -379,4 +398,3 @@ All features including advanced analytics and premium UX enhancements have been 
 
 **🎯 Production Ready:**
 The application is feature-complete with enterprise-grade analytics, premium UX features, and comprehensive accessibility support. All client-side features are implemented and optimized for performance.
-

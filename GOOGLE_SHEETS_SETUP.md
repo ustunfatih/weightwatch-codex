@@ -83,11 +83,13 @@ Create a file named `.env` in your project root:
 ```env
 VITE_GOOGLE_CLIENT_ID=your-client-id-here.apps.googleusercontent.com
 VITE_GOOGLE_SHEET_ID=your-sheet-id-here
+VITE_GOOGLE_API_KEY=your-google-api-key-here
 ```
 
 Replace the values with:
 - `VITE_GOOGLE_CLIENT_ID`: The OAuth Client ID from Step 3
 - `VITE_GOOGLE_SHEET_ID`: The Sheet ID from Step 4
+- `VITE_GOOGLE_API_KEY`: Optional API key for better quota tracking
 
 ### Update `.gitignore`
 
@@ -105,10 +107,10 @@ Your Google Sheet should have the following structure:
 
 ### Sheet 1: "Weight Data"
 
-| Date       | Week Day  | Weight | Change % | Change kg | Daily Change |
-|------------|-----------|--------|----------|-----------|--------------|
-| 2025-09-28 | Sunday    | 112.35 | 0.00     | 0.00      | 0.00         |
-| 2025-10-04 | Saturday  | 112.00 | -0.31    | -0.35     | -0.06        |
+| Date       | Week Day  | Weight | Change % | Change kg | Daily Change | Recorded At |
+|------------|-----------|--------|----------|-----------|--------------|-------------|
+| 2025-09-28 | Sunday    | 112.35 | 0.00     | 0.00      | 0.00         | 2025-09-28T09:15 |
+| 2025-10-04 | Saturday  | 112.00 | -0.31    | -0.35     | -0.06        | 2025-10-04T08:40 |
 
 ### Sheet 2: "Target"
 
@@ -157,6 +159,7 @@ Once you've completed the setup:
 - Verify your Sheet ID is correct
 - Check that your sheet structure matches the format above
 - Open browser DevTools Console to see detailed error messages
+- Ensure Date and Weight headers exist exactly in the Weight Data tab
 
 ## Security Notes
 
@@ -172,6 +175,6 @@ Once connected, your app will:
 - ✅ Sync changes to Google Sheets when you add/edit/delete entries
 - ✅ Show sync status in the header
 - ✅ Support offline mode with local caching
-- ✅ Auto-sync every 5 minutes
+- ✅ Auto-sync every 5 minutes (plus refresh on focus)
 
 Enjoy your connected weight tracking experience! 🎉
