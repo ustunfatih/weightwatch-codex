@@ -6,6 +6,13 @@ All planned features from Phases 1-5 have been successfully implemented. This do
 
 ---
 
+## 🚫 Not Planned (Decision)
+
+- Multiple profile support / Multiple Goals (Phase 6.5)
+- Import from other apps + Data Migration Tool (Phase 6.3)
+
+---
+
 ## 🐛 Recent Fixes
 
 ### ✅ Fixed: Modal Z-Index Issues
@@ -30,57 +37,56 @@ All planned features from Phases 1-5 have been successfully implemented. This do
 ### 6.1: Data Visualization Enhancements
 **Priority: High** | **Effort: Medium** | **Impact: High**
 
-- [ ] **Interactive Chart Tooltips**
+- [x] **Interactive Chart Tooltips**
   - Add detailed information on hover for timeline chart
   - Show exact weight, date, and change from previous entry
   - Display trend indicator (up/down arrows)
 
-- [ ] **Zoom and Pan for Timeline**
+- [x] **Zoom and Pan for Timeline**
   - Allow users to zoom into specific date ranges
   - Pan to view different periods
   - Reset to default view button
 
-- [ ] **Chart Export**
-  - Export individual charts as PNG
-  - Save chart data as CSV
-  - Share chart images directly
+- [x] **Chart Export**
+  - Export timeline as PNG
+  - Save visible timeline data as CSV
 
-- [ ] **Weight History Table View**
-  - Tabular view of all entries with sorting
-  - Inline editing capabilities
-  - Bulk delete with selection
+- [x] **Weight History Table View**
+  - Tabular view of entries with sortable columns
+  - Quick scan of change metrics and time-of-day
+  - Responsive table layout for mobile
 
 ### 6.2: Smart Notifications & Reminders
 **Priority: Medium** | **Effort: Medium** | **Impact: High**
 
-- [ ] **Daily Reminder System**
+- [x] **Daily Reminder System**
   - Browser push notifications for daily weigh-ins
   - Customizable reminder time
   - Smart skip for weekends if user prefers
 
-- [ ] **Milestone Notifications**
-  - Alert when approaching weight milestones
-  - Celebration notifications for achievements
-  - Warning for weight gain trends
+- [x] **Milestone Notifications**
+  - Progress milestones (25/50/75/100%)
+  - Weight-loss milestones (1/5/10/20kg)
+  - Near-goal nudge when within 1kg
 
-- [ ] **Streak Notifications**
+- [x] **Streak Notifications**
   - Remind users about active streaks
   - Motivational messages for maintaining consistency
 
 ### 6.3: Data Import/Export Enhancements
 **Priority: Medium** | **Effort: Low** | **Impact: Medium**
 
-- [ ] **Import from other apps**
+- [ ] **Import from other apps** *(Won't implement)*
   - Support for MyFitnessPal export format
   - Apple Health integration
   - Generic CSV import with mapping
 
-- [ ] **Backup & Restore**
+- [x] **Backup & Restore**
   - Complete data backup to file
   - Cloud backup option (local browser storage)
   - Restore from backup functionality
 
-- [ ] **Data Migration Tool**
+- [ ] **Data Migration Tool** *(Won't implement)*
   - Transfer data between devices
   - QR code sharing for quick setup
 
@@ -127,12 +133,12 @@ All planned features from Phases 1-5 have been successfully implemented. This do
 ### 7.1: Progressive Web App Features
 **Priority: High** | **Effort: Medium** | **Impact: High**
 
-- [ ] **Offline Data Entry**
+- [x] **Offline Data Entry**
   - Queue entries when offline
   - Sync when connection restored
   - Offline indicator
 
-- [ ] **Install Prompt**
+- [x] **Install Prompt**
   - Smart install banner
   - App-like experience on mobile
   - Home screen shortcut
@@ -145,10 +151,10 @@ All planned features from Phases 1-5 have been successfully implemented. This do
 ### 7.2: Mobile-First Features
 **Priority: Medium** | **Effort: Medium** | **Impact: High**
 
-- [ ] **Quick Entry Widget**
+- [x] **Quick Entry Widget**
   - Simplified mobile entry screen
-  - Swipe gestures for navigation
-  - Haptic feedback on iOS
+  - Inline time picker + voice input
+  - One-tap save flow
 
 - [ ] **Mobile Optimized Charts**
   - Touch-friendly chart interactions
@@ -293,30 +299,20 @@ All planned features from Phases 1-5 have been successfully implemented. This do
 
 Based on effort vs. impact, these are recommended as immediate next improvements:
 
-### 1. Interactive Chart Tooltips (1-2 days)
-- High user value
-- Improves data comprehension
-- Relatively easy to implement with Recharts
+### 1. Interactive Chart Tooltips ✅
+- Completed
 
-### 2. Daily Reminder System (2-3 days)
-- Massive impact on user retention
-- Push notification API is straightforward
-- localStorage for preferences
+### 2. Daily Reminder System ✅
+- Completed
 
-### 3. Data Backup & Restore (1 day)
-- User peace of mind
-- Simple JSON export/import
-- Prevents data loss fears
+### 3. Data Backup & Restore ✅
+- Completed
 
-### 4. Install Prompt for PWA (1 day)
-- Better mobile experience
-- Increases daily active users
-- Native-like feel
+### 4. Install Prompt for PWA ✅
+- Completed
 
-### 5. Multiple Profile Support (2-3 days)
-- Family tracking capability
-- Switch between users
-- Huge value add
+### 5. Multiple Profile Support *(Won't implement)*
+- Out of scope per decision
 
 ---
 
