@@ -21,7 +21,7 @@ export default defineConfig({
           // Group services
           'services': [
             './src/services/dataService.ts',
-            './src/services/googleSheetsService.ts',
+            './src/services/GoogleSheetsService.ts',
             './src/services/achievementService.ts',
             './src/services/analyticsService.ts',
             './src/services/aiAnalyticsService.ts'
