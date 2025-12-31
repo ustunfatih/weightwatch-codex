@@ -3,7 +3,16 @@ import { Scale, Plus, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { WeightEntry, TargetData, Statistics } from './types';
-import { fetchWeightData, fetchTargetData, addWeightEntry, updateWeightEntry, deleteWeightEntry, updateTargetData } from './services/dataService';
+import {
+  fetchWeightData,
+  fetchTargetData,
+  addWeightEntry,
+  updateWeightEntry,
+  deleteWeightEntry,
+  updateTargetData,
+  flushPendingSync,
+  hasPendingSync,
+} from './services/dataService';
 import { calculateStatistics } from './utils/calculations';
 import { BMIGauge } from './components/BMIGauge';
 import { ProgressOverview } from './components/ProgressOverview';
@@ -13,6 +22,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { SkeletonDashboard } from './components/SkeletonLoaders';
 import { Modal } from './components/Modal';
 import { WeightEntryForm } from './components/WeightEntryForm';
+import { QuickEntry } from './components/QuickEntry';
 import { SkipToContent } from './components/SkipToContent';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { staggerContainer, staggerItem } from './utils/animations';
@@ -20,6 +30,8 @@ import { Achievement } from './types/achievements';
 import { checkAchievements, loadAchievements } from './services/achievementService';
 import { STORAGE_KEYS, readString } from './services/storage';
 import { parseDateFlexible } from './utils/dateUtils';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
+import { triggerProgressNotifications } from './services/notificationService';
 
 // Lazy load heavy components that aren't immediately visible
 const Settings = lazy(() => import('./components/Settings').then(m => ({ default: m.Settings })));
@@ -42,6 +54,18 @@ function App() {
   const [celebrationAchievement, setCelebrationAchievement] = useState<Achievement | null>(null);
   const [showTrendsPage, setShowTrendsPage] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const isOnline = useOnlineStatus();
+  const [pendingSync, setPendingSync] = useState(() => hasPendingSync());
+
+  const syncBadge = useMemo(() => {
+    if (!isOnline) {
+      return { label: 'Offline - saving locally', tone: 'offline' };
+    }
+    if (pendingSync) {
+      return { label: 'Sync pending', tone: 'pending' };
+    }
+    return null;
+  }, [isOnline, pendingSync]);
 
   // Memoize statistics calculation - only recalculate when entries or targetData change
   const stats = useMemo<Statistics | null>(() => {
@@ -87,6 +111,24 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    setPendingSync(hasPendingSync());
+  }, [entries, targetData]);
+
+  useEffect(() => {
+    if (!isOnline || !pendingSync) return;
+
+    const attemptFlush = async () => {
+      const flushed = await flushPendingSync();
+      if (flushed) {
+        setPendingSync(false);
+        toast.success('Pending changes synced!');
+      }
+    };
+
+    attemptFlush();
+  }, [isOnline, pendingSync]);
+
   // Check for new achievements whenever entries or stats change
   useEffect(() => {
     if (entries.length > 0 && targetData && stats) {
@@ -123,14 +165,26 @@ function App() {
       if (editingEntry) {
         // Update existing entry
         updatedEntries = await updateWeightEntry(editingEntry.date, entry);
-        toast.success('Weight entry updated successfully!');
+        toast.success(isOnline
+          ? 'Weight entry updated successfully!'
+          : 'Entry updated locally. Syncs when online.');
       } else {
         // Add new entry
         updatedEntries = await addWeightEntry(entry);
-        toast.success('Weight entry added successfully!');
+        toast.success(isOnline
+          ? 'Weight entry added successfully!'
+          : 'Entry saved locally. Syncs when online.');
       }
 
       setEntries(updatedEntries);
+      if (targetData) {
+        try {
+          const updatedStats = calculateStatistics(updatedEntries, targetData);
+          triggerProgressNotifications(updatedEntries, targetData, updatedStats);
+        } catch (err) {
+          console.warn('Failed to evaluate notifications:', err);
+        }
+      }
       setIsModalOpen(false);
       setEditingEntry(null);
     } catch (err) {
@@ -145,7 +199,9 @@ function App() {
       setEntries(updatedEntries);
       setIsModalOpen(false);
       setEditingEntry(null);
-      toast.success('Weight entry deleted successfully!');
+      toast.success(isOnline
+        ? 'Weight entry deleted successfully!'
+        : 'Entry deleted locally. Syncs when online.');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete entry';
       toast.error(message);
@@ -255,6 +311,17 @@ function App() {
                 })()}
               </div>
 
+              {syncBadge && (
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--paper-2)] text-xs text-[var(--ink-muted)] border border-[color:var(--border-subtle)]">
+                  <span className={`w-2 h-2 rounded-full ${syncBadge.tone === 'offline'
+                    ? 'bg-[var(--accent)]'
+                    : 'bg-[var(--accent-3)]'
+                    }`}
+                  />
+                  <span>{syncBadge.label}</span>
+                </div>
+              )}
+
               {/* Divider */}
               <div className="hidden sm:block w-px h-6 bg-[var(--border-subtle)] mx-1" />
 
@@ -326,6 +393,27 @@ function App() {
           <Suspense fallback={null}>
             <SmartTips entries={entries} stats={stats} />
           </Suspense>
+        </motion.section>
+
+        {syncBadge && (
+          <motion.section className="mb-6 sm:hidden" variants={staggerItem} aria-live="polite">
+            <div className="rounded-2xl border border-[color:var(--border-subtle)] bg-[var(--paper-2)] px-4 py-3 text-xs text-[var(--ink-muted)] flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${syncBadge.tone === 'offline'
+                ? 'bg-[var(--accent)]'
+                : 'bg-[var(--accent-3)]'
+                }`}
+              />
+              <span>{syncBadge.label}</span>
+            </div>
+          </motion.section>
+        )}
+
+        <motion.section className="mb-8 sm:hidden" variants={staggerItem} aria-label="Quick entry">
+          <QuickEntry
+            onSubmit={handleSubmitEntry}
+            onOpenFullForm={handleAddEntry}
+            isOnline={isOnline}
+          />
         </motion.section>
 
         {/* Progress Overview */}

@@ -8,7 +8,7 @@ import { DailyReminder } from './DailyReminder';
 import { DataBackup } from './DataBackup';
 import { GoogleSheetsSetupGuide } from './GoogleSheetsSetupGuide';
 import { WeightEntry, TargetData } from '../types';
-import { updateLastEntryDate } from '../services/dataService';
+import { flushPendingSync, hasPendingSync, updateLastEntryDate } from '../services/dataService';
 import { STORAGE_KEYS, writeJSON, writeString, readString } from '../services/storage';
 
 interface SettingsProps {
@@ -25,6 +25,7 @@ export const Settings = ({ onSyncComplete, entries = [], targetData = null, onDa
   const [sheetId, setSheetId] = useState('');
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [pendingSync, setPendingSync] = useState(false);
 
   const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -53,6 +54,7 @@ export const Settings = ({ onSyncComplete, entries = [], targetData = null, onDa
     });
 
     setIsSignedIn(googleSheetsService.isSignedIn());
+    setPendingSync(hasPendingSync());
 
     // Subscribe to sync status changes
     const unsubscribe = googleSheetsService.onStatusChange((status) => {
@@ -74,6 +76,13 @@ export const Settings = ({ onSyncComplete, entries = [], targetData = null, onDa
     }
 
     try {
+      const flushed = await flushPendingSync();
+      setPendingSync(hasPendingSync());
+
+      if (flushed && showToast) {
+        toast.success('Pending offline changes synced!');
+      }
+
       const data = await googleSheetsService.syncFromSheets();
 
       if (data.changed) {
@@ -145,6 +154,15 @@ export const Settings = ({ onSyncComplete, entries = [], targetData = null, onDa
   }, [isSignedIn, sheetId]);
 
   const getSyncStatusDisplay = () => {
+    if (pendingSync) {
+      return (
+        <div className="flex items-center gap-2 text-[var(--accent)]">
+          <AlertCircle className="w-4 h-4" />
+          <span className="text-sm">Pending sync (offline)</span>
+        </div>
+      );
+    }
+
     switch (syncStatus) {
       case 'syncing':
         return (
@@ -297,7 +315,7 @@ export const Settings = ({ onSyncComplete, entries = [], targetData = null, onDa
             </div>
           )}
 
-          {activeTab === 'reminders' && <DailyReminder />}
+          {activeTab === 'reminders' && <DailyReminder entries={entries} />}
 
           {activeTab === 'backup' && onDataRestore && (
             <DataBackup

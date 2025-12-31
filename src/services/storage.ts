@@ -8,9 +8,11 @@ export const STORAGE_KEYS = {
   REMINDER_SETTINGS: 'weightwatch-reminder-settings',
   GOOGLE_SHEET_ID: 'google-sheet-id',
   GOOGLE_SHEETS_SYNC_HASH: 'google-sheets-sync-hash',
+  GOOGLE_SHEETS_PENDING_SYNC: 'google-sheets-pending-sync',
   ONBOARDING_COMPLETED: 'weightwatch-onboarding-completed',
   PWA_INSTALL_DISMISSED: 'pwa-install-dismissed',
   SMART_TIPS: 'weightwatch-dismissed-tips',
+  NOTIFICATION_HISTORY: 'weightwatch-notification-history',
 } as const;
 
 export function readJSON<T>(key: string, fallback: T): T {

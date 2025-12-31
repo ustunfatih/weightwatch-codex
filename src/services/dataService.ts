@@ -1,5 +1,5 @@
 import { WeightEntry, TargetData } from '../types';
-import { STORAGE_KEYS, readJSON, writeJSON, writeString, removeKey } from './storage';
+import { STORAGE_KEYS, readJSON, readString, writeJSON, writeString, removeKey } from './storage';
 import { googleSheetsService } from './GoogleSheetsService';
 import { normalizeRecordedAt, parseDateFlexible, toISODate } from '../utils/dateUtils';
 
@@ -85,12 +85,20 @@ function recalculateEntries(entries: WeightEntry[]): WeightEntry[] {
 }
 
 async function syncToSheetsIfEnabled(entries: WeightEntry[], targetData: TargetData): Promise<void> {
+  if (!googleSheetsService.isSignedIn()) return;
+  if (!googleSheetsService.getSpreadsheetId()) return;
+
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    queuePendingSync(entries, targetData, 'offline');
+    return;
+  }
+
   try {
-    if (!googleSheetsService.isSignedIn()) return;
-    if (!googleSheetsService.getSpreadsheetId()) return;
     await googleSheetsService.syncToSheets(entries, targetData);
+    clearPendingSync();
   } catch (error) {
     console.warn('Google Sheets sync failed:', error);
+    queuePendingSync(entries, targetData, 'error');
   }
 }
 
@@ -138,6 +146,68 @@ function normalizeTargetData(target: TargetData): TargetData {
     writeJSON(STORAGE_KEYS.TARGET_DATA, normalized);
   }
   return normalized;
+}
+
+type PendingSyncPayload = {
+  entries: WeightEntry[];
+  targetData: TargetData;
+  queuedAt: string;
+  reason: 'offline' | 'error';
+};
+
+function queuePendingSync(
+  entries: WeightEntry[],
+  targetData: TargetData,
+  reason: PendingSyncPayload['reason']
+): void {
+  const payload: PendingSyncPayload = {
+    entries,
+    targetData,
+    queuedAt: new Date().toISOString(),
+    reason,
+  };
+  writeJSON(STORAGE_KEYS.GOOGLE_SHEETS_PENDING_SYNC, payload);
+}
+
+function clearPendingSync(): void {
+  removeKey(STORAGE_KEYS.GOOGLE_SHEETS_PENDING_SYNC);
+}
+
+export function getPendingSync(): PendingSyncPayload | null {
+  return readJSON<PendingSyncPayload | null>(STORAGE_KEYS.GOOGLE_SHEETS_PENDING_SYNC, null);
+}
+
+export function hasPendingSync(): boolean {
+  return Boolean(getPendingSync());
+}
+
+export async function flushPendingSync(): Promise<boolean> {
+  const pending = getPendingSync();
+  if (!pending) return false;
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
+  const storedSheetId = readString(STORAGE_KEYS.GOOGLE_SHEET_ID, googleSheetsService.getSpreadsheetId());
+  if (storedSheetId && storedSheetId !== googleSheetsService.getSpreadsheetId()) {
+    googleSheetsService.setSpreadsheetId(storedSheetId);
+  }
+
+  try {
+    await googleSheetsService.initClient();
+  } catch (error) {
+    console.warn('Failed to initialize Google Sheets client:', error);
+    return false;
+  }
+
+  if (!googleSheetsService.isSignedIn()) return false;
+  if (!googleSheetsService.getSpreadsheetId()) return false;
+
+  try {
+    await googleSheetsService.syncToSheets(pending.entries, pending.targetData);
+    clearPendingSync();
+    return true;
+  } catch (error) {
+    console.warn('Failed to sync pending changes:', error);
+    return false;
+  }
 }
 
 // Get entries from localStorage or return mock data
