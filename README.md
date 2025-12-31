@@ -40,6 +40,8 @@ Weightwatch/
 
 ## Getting Started
 
+> Deploy trigger: refresh main branch build.
+
 1. **Install dependencies**
    ```bash
    npm install
