@@ -18,6 +18,30 @@ interface SettingsProps {
   onDataRestore?: (entries: WeightEntry[], targetData: TargetData | null) => void;
 }
 
+const formatGoogleAuthError = (err: unknown) => {
+  const record = typeof err === 'object' && err !== null ? (err as Record<string, unknown>) : null;
+  const errorCode = typeof record?.error === 'string' ? record.error : '';
+  const description = typeof record?.error_description === 'string' ? record.error_description : '';
+  const details = typeof record?.details === 'string' ? record.details : '';
+  const message = err instanceof Error ? err.message : '';
+  const combined = `${errorCode} ${description} ${details} ${message}`.toLowerCase();
+  const origin = window.location.origin;
+
+  if (combined.includes('redirect_uri_mismatch')) {
+    return `Google OAuth redirect mismatch. Add ${origin} to Authorized JavaScript origins and redirect URIs in Google Cloud.`;
+  }
+
+  if (combined.includes('access_denied')) {
+    return 'Google OAuth access denied. Make sure your account is added as a test user in the OAuth consent screen.';
+  }
+
+  if (combined.includes('popup_closed_by_user')) {
+    return 'Sign-in canceled. Please complete the Google popup to connect.';
+  }
+
+  return 'Failed to connect to Google Sheets';
+};
+
 export const Settings = ({ onSyncComplete, entries = [], targetData = null, onDataRestore }: SettingsProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'sync' | 'reminders' | 'backup'>('sync');
@@ -115,7 +139,7 @@ export const Settings = ({ onSyncComplete, entries = [], targetData = null, onDa
       syncFromSheets(false);
     } catch (err) {
       console.error('Sign in error:', err);
-      toast.error('Failed to connect to Google Sheets');
+      toast.error(formatGoogleAuthError(err));
     }
   };
 

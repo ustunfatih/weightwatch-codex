@@ -11,12 +11,17 @@ export function GoogleSheetsSetupGuide() {
         <li>Ensure <strong>Weight Data</strong> has headers: Date, Week Day, Weight, Change %, Change kg, Daily Change, Recorded At.</li>
         <li>Enable the Google Sheets API in Google Cloud.</li>
         <li>Create an OAuth Client ID (Web) and add your app origin.</li>
+        <li>
+          Add both <code>http://localhost:5173</code> and <code>http://127.0.0.1:5173</code> to
+          Authorized JavaScript origins and redirect URIs.
+        </li>
         <li>(Optional) Add <code>VITE_GOOGLE_API_KEY</code> for better quota tracking.</li>
         <li>Set <code>VITE_GOOGLE_CLIENT_ID</code> in your env and restart the dev server.</li>
         <li>Paste your Sheet ID in the field above and click “Connect”.</li>
       </ol>
       <p className="text-xs text-[var(--ink-muted)]">
-        Live sync is enabled and will pull updates periodically while connected.
+        If you see <code>redirect_uri_mismatch</code>, your current origin must be added in Google
+        Cloud Console.
       </p>
       <a
         href="https://developers.google.com/sheets/api/quickstart/js"

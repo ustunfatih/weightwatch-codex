@@ -53,11 +53,15 @@ This guide will help you connect your Weightwatch dashboard to your Google Sheet
    ```
    http://localhost:5173
    http://localhost:4173
+   http://127.0.0.1:5173
+   http://127.0.0.1:4173
    ```
 6. Under **"Authorized redirect URIs"**, add:
    ```
    http://localhost:5173
    http://localhost:4173
+   http://127.0.0.1:5173
+   http://127.0.0.1:4173
    ```
 7. Click **"Create"**
 8. **IMPORTANT**: Copy your **Client ID** - you'll need this!
@@ -141,6 +145,11 @@ Once you've completed the setup:
 7. Click **"Sync Now"** to fetch your data
 
 ## Troubleshooting
+
+### "Access blocked: This app's request is invalid" / redirect_uri_mismatch
+
+- Add the exact origin you're using (for example, `http://127.0.0.1:5173`) to both Authorized JavaScript origins and Authorized redirect URIs
+- Make sure you're opening the app with the same URL you added in Google Cloud
 
 ### "Access Denied" Error
 
