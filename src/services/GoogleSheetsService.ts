@@ -222,13 +222,13 @@ class GoogleSheetsService {
       ]);
 
       const headerRow = headerResponse.result.values?.[0] || [];
-      const rows = dataResponse.result.values || [];
+      const rows: any[][] = dataResponse.result.values || [];
       const columnMap = this.resolveWeightColumnMap(headerRow);
 
       const entries = this.normalizeEntries(
         rows
           .map((row: any[]) => this.mapWeightRow(row, columnMap))
-          .filter((entry): entry is WeightEntry => Boolean(entry))
+          .filter((entry): entry is WeightEntry => entry !== null)
       );
 
       this.updateSyncStatus('success');
@@ -532,16 +532,20 @@ class GoogleSheetsService {
     if (entries.length === 0) return entries;
 
     const normalized = entries
-      .map((entry) => {
+      .map((entry): WeightEntry | null => {
         const isoDate = toISODate(entry.date);
         if (!isoDate) return null;
-        return {
+        const normalizedEntry: WeightEntry = {
           ...entry,
           date: isoDate,
-          recordedAt: normalizeRecordedAt(isoDate, entry.recordedAt),
         };
+        const recordedAt = normalizeRecordedAt(isoDate, entry.recordedAt);
+        if (recordedAt !== undefined) {
+          normalizedEntry.recordedAt = recordedAt;
+        }
+        return normalizedEntry;
       })
-      .filter((entry): entry is WeightEntry => Boolean(entry));
+      .filter((entry): entry is WeightEntry => entry !== null);
 
     const sorted = [...normalized].sort((a, b) => {
       const aDate = parseDateFlexible(a.date) ?? new Date(a.date);

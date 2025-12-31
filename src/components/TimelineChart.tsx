@@ -317,6 +317,7 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
     if (active && payload && payload.length) {
       const data = payload[0].payload as ChartDataPoint;
       const fullDate = parseDateFlexible(data.fullDate);
+      const chartStartDate = parseDateFlexible(targetData.startDate) ?? new Date();
 
       // Find previous entry for change calculation
       const currentIndex = visibleChartData.findIndex(d => d.fullDate === data.fullDate);
@@ -335,7 +336,7 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
 
       // Count days since start for this entry
       const daysSinceStart = data.weight && fullDate
-        ? differenceInDays(fullDate, startDate)
+        ? differenceInDays(fullDate, chartStartDate)
         : null;
 
       return (

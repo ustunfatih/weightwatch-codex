@@ -119,17 +119,20 @@ export function updateLastEntryDate(entries: WeightEntry[]): void {
 
 function normalizeStoredEntries(entries: WeightEntry[]): WeightEntry[] {
   const normalized = entries
-    .map((entry) => {
+    .map((entry): WeightEntry | null => {
       const isoDate = toISODate(entry.date);
       if (!isoDate) return null;
       const recordedAt = normalizeRecordedAt(isoDate, entry.recordedAt);
-      return {
+      const normalizedEntry: WeightEntry = {
         ...entry,
         date: isoDate,
-        recordedAt,
       };
+      if (recordedAt !== undefined) {
+        normalizedEntry.recordedAt = recordedAt;
+      }
+      return normalizedEntry;
     })
-    .filter((entry): entry is WeightEntry => Boolean(entry));
+    .filter((entry): entry is WeightEntry => entry !== null);
 
   if (normalized.length !== entries.length) {
     writeJSON(STORAGE_KEYS.WEIGHT_ENTRIES, normalized);

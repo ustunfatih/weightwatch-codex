@@ -1,9 +1,8 @@
 import { WeightEntry, TargetData, Statistics } from '../types';
 import { Achievement, AchievementId, ACHIEVEMENTS } from '../types/achievements';
-import { differenceInDays, eachDayOfInterval, getHours, format } from 'date-fns';
+import { differenceInDays, eachDayOfInterval, getHours, format, subDays } from 'date-fns';
 import { STORAGE_KEYS, readJSON, writeJSON } from './storage';
 import { parseDateFlexible } from '../utils/dateUtils';
-import { calculateEntryStreak, getUniqueEntryDays } from '../utils/streaks';
 
 // Load achievements from localStorage
 export function loadAchievements(): Achievement[] {
@@ -57,7 +56,7 @@ export function checkAchievements(
   }
 
   // Check for consecutive streaks
-  const currentStreak = calculateEntryStreak(entries);
+  const currentStreak = calculateCurrentStreak(entries);
   if (currentStreak >= 7 && !isUnlocked('week_streak')) {
     unlock('week_streak');
   }
@@ -110,6 +109,35 @@ export function checkAchievements(
   return { achievements: currentAchievements, newlyUnlocked };
 }
 
+// Calculate current consecutive streak
+function calculateCurrentStreak(entries: WeightEntry[]): number {
+  if (entries.length === 0) return 0;
+
+  const uniqueDays = getUniqueEntryDays(entries);
+  const sortedDays = uniqueDays
+    .map((day) => parseDateFlexible(day))
+    .filter((day): day is Date => Boolean(day))
+    .sort((a, b) => b.getTime() - a.getTime());
+
+  const today = new Date();
+  const latestEntry = sortedDays[0];
+
+  // If latest entry is not today or yesterday, streak is broken
+  const daysSinceLatest = differenceInDays(today, latestEntry);
+  if (daysSinceLatest > 1) return 0;
+
+  let streak = 0;
+  let checkDate = latestEntry;
+  const daysSet = new Set(uniqueDays);
+
+  while (daysSet.has(format(checkDate, 'yyyy-MM-dd'))) {
+    streak++;
+    checkDate = subDays(checkDate, 1);
+  }
+
+  return streak;
+}
+
 // Check if current week is perfect (all 7 days logged)
 function isPerfectWeek(entries: WeightEntry[]): boolean {
   const today = new Date();
@@ -152,6 +180,20 @@ function calculateConsistency(entries: WeightEntry[]): number {
 
   const trackedDays = uniqueDays.length;
   return totalDays > 0 ? (trackedDays / totalDays) * 100 : 0;
+}
+
+function getUniqueEntryDays(entries: WeightEntry[]): string[] {
+  const daySet = new Set<string>();
+
+  entries.forEach((entry) => {
+    const source = entry.date || entry.recordedAt;
+    if (!source) return;
+    const parsed = parseDateFlexible(source);
+    if (!parsed) return;
+    daySet.add(format(parsed, 'yyyy-MM-dd'));
+  });
+
+  return Array.from(daySet);
 }
 
 // Get achievement statistics
