@@ -46,6 +46,8 @@ vi.mock('../../services/dataService', () => ({
   updateWeightEntry: vi.fn(),
   deleteWeightEntry: vi.fn(),
   updateTargetData: vi.fn(),
+  hasPendingSync: vi.fn(() => false),
+  flushPendingSync: vi.fn(() => Promise.resolve(false)),
 }));
 
 // Mock achievement service
