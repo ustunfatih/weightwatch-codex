@@ -89,6 +89,26 @@ export async function exportToPDF(elementId: string, filename?: string): Promise
 }
 
 /**
+ * Export a specific element to PNG
+ */
+export async function exportElementToPNG(elementId: string, filename?: string): Promise<void> {
+  const element = document.getElementById(elementId);
+  if (!element) {
+    throw new Error(`Element with id "${elementId}" not found`);
+  }
+
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    logging: false,
+  });
+
+  const imgData = canvas.toDataURL('image/png');
+  const imageFilename = filename || `weightwatch-chart-${format(new Date(), 'yyyy-MM-dd')}.png`;
+  downloadShareImage(imgData, imageFilename);
+}
+
+/**
  * Generate sharing card image
  */
 export async function generateShareImage(

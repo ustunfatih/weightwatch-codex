@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   LineChart,
   Line,
@@ -8,11 +8,17 @@ import {
   Tooltip,
   ResponsiveContainer,
   TooltipProps,
+  Brush,
 } from 'recharts';
+import { Download, FileText, Table } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { WeightEntry, TargetData } from '../types';
 import { format, parseISO, startOfWeek, startOfMonth, differenceInDays, addDays } from 'date-fns';
 import { STORAGE_KEYS, readString, writeString } from '../services/storage';
 import { parseDateFlexible } from '../utils/dateUtils';
+import { exportElementToPNG, exportToCSV } from '../services/exportService';
+import { WeightHistoryTable } from './WeightHistoryTable';
 
 interface TimelineChartProps {
   entries: WeightEntry[];
@@ -34,18 +40,38 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
     const saved = readString(STORAGE_KEYS.TIMELINE_VIEW);
     return (saved as ViewMode) || 'daily';
   });
+  const [showTable, setShowTable] = useState(false);
+  const [range, setRange] = useState<{ startIndex: number; endIndex: number } | null>(null);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   // Save view preference when it changes
   useEffect(() => {
     writeString(STORAGE_KEYS.TIMELINE_VIEW, viewMode);
   }, [viewMode]);
 
+  useEffect(() => {
+    setRange(null);
+  }, [viewMode, entries.length]);
+
+  const startDate = useMemo(
+    () => parseDateFlexible(targetData.startDate) ?? new Date(),
+    [targetData.startDate]
+  );
+  const endDate = useMemo(
+    () => parseDateFlexible(targetData.endDate) ?? new Date(),
+    [targetData.endDate]
+  );
+  const dailyTargetLoss = useMemo(
+    () => targetData.totalKg / Math.max(targetData.totalDuration, 1),
+    [targetData.totalKg, targetData.totalDuration]
+  );
+  const calculateTargetForDate = useCallback((date: Date): number => {
+    const daysFromStart = differenceInDays(date, startDate);
+    return targetData.startWeight - (dailyTargetLoss * daysFromStart);
+  }, [dailyTargetLoss, startDate, targetData.startWeight]);
+
   // Memoize chart data generation based on view mode
   const chartData = useMemo<ChartDataPoint[]>(() => {
-    const startDate = parseDateFlexible(targetData.startDate) ?? new Date();
-    const endDate = parseDateFlexible(targetData.endDate) ?? new Date();
-    const dailyTargetLoss = targetData.totalKg / targetData.totalDuration;
-
     const parsedEntries = entries
       .map((entry) => ({
         ...entry,
@@ -57,12 +83,6 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
     const sortedEntries = [...parsedEntries].sort(
       (a, b) => a.dateObj.getTime() - b.dateObj.getTime()
     );
-
-    // Helper function to calculate target weight for any date
-    const calculateTargetForDate = (date: Date): number => {
-      const daysFromStart = differenceInDays(date, startDate);
-      return targetData.startWeight - (dailyTargetLoss * daysFromStart);
-    };
 
     let dataPoints: ChartDataPoint[] = [];
 
@@ -226,7 +246,72 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
     }
 
     return dataPoints;
-  }, [entries, targetData, viewMode]);
+  }, [entries, viewMode, startDate, endDate, calculateTargetForDate]);
+
+  const visibleChartData = useMemo(() => {
+    if (!range) return chartData;
+    return chartData.slice(range.startIndex, range.endIndex + 1);
+  }, [chartData, range]);
+
+  const rangeDates = useMemo(() => {
+    if (visibleChartData.length === 0) return null;
+    const start = parseDateFlexible(visibleChartData[0].fullDate);
+    const end = parseDateFlexible(visibleChartData[visibleChartData.length - 1].fullDate);
+    return { start, end };
+  }, [visibleChartData]);
+
+  const entriesInRange = useMemo(() => {
+    if (!rangeDates?.start || !rangeDates?.end) return entries;
+    const start = rangeDates.start;
+    const end = rangeDates.end;
+    return entries.filter((entry) => {
+      const parsed = parseDateFlexible(entry.date);
+      if (!parsed) return false;
+      return parsed >= start && parsed <= end;
+    });
+  }, [entries, rangeDates]);
+
+  const rangeLabel = useMemo(() => {
+    if (!rangeDates?.start || !rangeDates?.end) return 'Full range';
+    return `${format(rangeDates.start, 'MMM dd, yyyy')} - ${format(rangeDates.end, 'MMM dd, yyyy')}`;
+  }, [rangeDates]);
+
+  const handleBrushChange = (brush: { startIndex?: number; endIndex?: number } | null) => {
+    if (!brush || brush.startIndex === undefined || brush.endIndex === undefined) {
+      setRange(null);
+      return;
+    }
+    if (brush.startIndex === 0 && brush.endIndex === chartData.length - 1) {
+      setRange(null);
+      return;
+    }
+    setRange({ startIndex: brush.startIndex, endIndex: brush.endIndex });
+  };
+
+  const handleResetZoom = () => setRange(null);
+
+  const handleExportPNG = async () => {
+    try {
+      setIsExportOpen(false);
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+      await exportElementToPNG('timeline-chart-export');
+      toast.success('Chart exported as PNG!');
+    } catch (error) {
+      console.error('Chart PNG export error:', error);
+      toast.error('Failed to export chart image');
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      setIsExportOpen(false);
+      await exportToCSV(entriesInRange, targetData);
+      toast.success('Chart data exported as CSV!');
+    } catch (error) {
+      console.error('Chart CSV export error:', error);
+      toast.error('Failed to export chart data');
+    }
+  };
 
   const CustomTooltip: React.FC<TooltipProps<number, string>> = ({ active, payload }) => {
     if (active && payload && payload.length) {
@@ -234,8 +319,8 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
       const fullDate = parseDateFlexible(data.fullDate);
 
       // Find previous entry for change calculation
-      const currentIndex = chartData.findIndex(d => d.fullDate === data.fullDate);
-      const previousData = currentIndex > 0 ? chartData[currentIndex - 1] : null;
+      const currentIndex = visibleChartData.findIndex(d => d.fullDate === data.fullDate);
+      const previousData = currentIndex > 0 ? visibleChartData[currentIndex - 1] : null;
 
       // Calculate weight change
       const weightChange = data.weight && previousData?.weight
@@ -347,7 +432,7 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
 
   // Calculate x-axis tick interval based on data length
   const tickInterval = useMemo(() => {
-    const dataLength = chartData.length;
+    const dataLength = visibleChartData.length;
     if (viewMode === 'daily') {
       // Show every 3rd or 4th tick in daily view
       return Math.ceil(dataLength / 10);
@@ -358,15 +443,15 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
       // Show all ticks in monthly view
       return 1;
     }
-  }, [chartData.length, viewMode]);
+  }, [visibleChartData.length, viewMode]);
 
   // Calculate dynamic Y-axis domain based on data
   const yAxisDomain = useMemo(() => {
-    const weights = chartData
+    const weights = visibleChartData
       .map(d => d.weight)
       .filter((w): w is number => w !== null);
 
-    const targets = chartData.map(d => d.target);
+    const targets = visibleChartData.map(d => d.target);
     const allValues = [...weights, ...targets];
 
     if (allValues.length === 0) {
@@ -389,7 +474,7 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
     }
 
     return [yMin, yMax];
-  }, [chartData]);
+  }, [visibleChartData]);
 
   // Generate nice ticks for Y-axis
   const yAxisTicks = useMemo(() => {
@@ -407,96 +492,199 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ entries, targetDat
 
   return (
     <div className="card-elevated h-full p-6">
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="eyebrow mb-2">Tracking</div>
-            <h2 className="font-display text-2xl font-black text-[var(--ink)]">Weight Timeline</h2>
-          </div>
+      <div id="timeline-chart-export">
+        <div className="mb-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="eyebrow mb-2">Tracking</div>
+              <h2 className="font-display text-2xl font-black text-[var(--ink)]">Weight Timeline</h2>
+            </div>
 
-          {/* View Mode Selector */}
-          <div className="segmented flex gap-2">
-            {viewModes.map((mode) => (
+            <div className="flex flex-wrap items-center gap-3">
               <button
-                key={mode.value}
-                onClick={() => setViewMode(mode.value)}
-                className={`segmented-btn ${viewMode === mode.value ? 'active' : ''}`}
+                onClick={() => setShowTable(prev => !prev)}
+                className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
               >
-                {mode.label}
+                <Table className="w-4 h-4" />
+                {showTable ? 'Hide Table' : 'Table View'}
               </button>
-            ))}
+
+              {/* View Mode Selector */}
+              <div className="segmented flex gap-2">
+                {viewModes.map((mode) => (
+                  <button
+                    key={mode.value}
+                    onClick={() => setViewMode(mode.value)}
+                    className={`segmented-btn ${viewMode === mode.value ? 'active' : ''}`}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Export Menu */}
+              <div className="relative">
+                <motion.button
+                  onClick={() => setIsExportOpen(!isExportOpen)}
+                  className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Download className="w-4 h-4" />
+                  Export
+                </motion.button>
+
+                <AnimatePresence>
+                  {isExportOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsExportOpen(false)} />
+                      <motion.div
+                        className="absolute right-0 top-full mt-2 w-56 bg-[var(--paper-3)] rounded-xl shadow-2xl border border-[color:var(--border-default)] overflow-hidden z-50"
+                        initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div className="p-2 space-y-1">
+                          <motion.button
+                            onClick={handleExportPNG}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-[var(--ink)] hover:bg-[var(--paper-2)] rounded-lg transition-colors"
+                            whileHover={{ x: 4 }}
+                          >
+                            <Download className="w-5 h-5 text-[var(--accent-2)]" />
+                            <div className="flex-1">
+                              <div className="font-medium">Chart PNG</div>
+                              <div className="text-xs text-[var(--ink-muted)]">Capture timeline view</div>
+                            </div>
+                          </motion.button>
+
+                          <motion.button
+                            onClick={handleExportCSV}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-[var(--ink)] hover:bg-[var(--paper-2)] rounded-lg transition-colors"
+                            whileHover={{ x: 4 }}
+                          >
+                            <FileText className="w-5 h-5 text-[var(--accent)]" />
+                            <div className="flex-1">
+                              <div className="font-medium">Chart CSV</div>
+                              <div className="text-xs text-[var(--ink-muted)]">Export visible entries</div>
+                            </div>
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-1 rounded-full" style={{ backgroundColor: 'var(--chart-actual)' }} />
+              <span className="text-[var(--ink-muted)]">Actual</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-1 rounded-full border-2 border-dashed" style={{ borderColor: 'var(--chart-target)' }} />
+              <span className="text-[var(--ink-muted)]">Target Pace</span>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[var(--ink-muted)]">
+            <span className="px-3 py-1 rounded-full border border-[color:var(--border-subtle)] bg-[var(--paper-2)]">
+              Range: {rangeLabel}
+            </span>
+            {range && (
+              <button
+                onClick={handleResetZoom}
+                className="px-3 py-1 rounded-full border border-[color:var(--border-subtle)] bg-[var(--paper-3)] text-[var(--ink)] hover:bg-[var(--paper-2)] transition-colors"
+              >
+                Reset zoom
+              </button>
+            )}
+            <span>Drag handles to zoom, drag the window to pan.</span>
           </div>
         </div>
 
-        <div className="flex gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-1 rounded-full" style={{ backgroundColor: 'var(--chart-actual)' }} />
-            <span className="text-[var(--ink-muted)]">Actual</span>
+        <ResponsiveContainer width="100%" height={320}>
+          <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+            <XAxis
+              dataKey="date"
+              stroke="var(--chart-axis)"
+              tick={{ fill: 'var(--ink-muted)', fontSize: 12 }}
+              tickLine={false}
+              interval={tickInterval}
+            />
+            <YAxis
+              stroke="var(--chart-axis)"
+              tick={{ fill: 'var(--ink-muted)', fontSize: 12 }}
+              tickLine={false}
+              domain={yAxisDomain}
+              ticks={yAxisTicks}
+            />
+            <Tooltip content={<CustomTooltip />} />
+
+            {/* Target trajectory line (dashed) - MUST be linear for straight line */}
+            <Line
+              type="linear"
+              dataKey="target"
+              stroke="var(--chart-target)"
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              dot={false}
+              activeDot={{ r: 4, fill: 'var(--chart-target)' }}
+            />
+
+            {/* Actual weight line - connects all actual data points */}
+            <Line
+              type="monotone"
+              dataKey="weight"
+              stroke="var(--chart-actual)"
+              strokeWidth={3}
+              dot={{ fill: 'var(--chart-actual)', r: 4 }}
+              activeDot={{ r: 6, fill: 'var(--chart-actual)' }}
+              connectNulls={true}
+              isAnimationActive={false}
+            />
+
+            {chartData.length > 6 && (
+              <Brush
+                dataKey="date"
+                height={26}
+                stroke="var(--chart-axis)"
+                fill="var(--paper-2)"
+                travellerWidth={12}
+                startIndex={range?.startIndex}
+                endIndex={range?.endIndex}
+                onChange={handleBrushChange}
+              />
+            )}
+          </LineChart>
+        </ResponsiveContainer>
+
+        {/* Milestone markers */}
+        <div className="mt-6 grid grid-cols-2 gap-4">
+          <div className="rounded-2xl p-4 border border-[color:var(--border-subtle)] bg-[var(--paper-2)]">
+            <div className="text-sm text-[var(--ink-muted)] mb-1">Starting Weight</div>
+            <div className="text-2xl font-bold text-[var(--accent-2)]">{targetData.startWeight} kg</div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-1 rounded-full border-2 border-dashed" style={{ borderColor: 'var(--chart-target)' }} />
-            <span className="text-[var(--ink-muted)]">Target Pace</span>
+          <div className="rounded-2xl p-4 border border-[color:var(--border-subtle)] bg-[var(--paper-2)]">
+            <div className="text-sm text-[var(--ink-muted)] mb-1">Current Weight</div>
+            <div className="text-2xl font-bold text-[var(--accent)]">
+              {entries[entries.length - 1].weight} kg
+            </div>
           </div>
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
-          <XAxis
-            dataKey="date"
-            stroke="var(--chart-axis)"
-            tick={{ fill: 'var(--ink-muted)', fontSize: 12 }}
-            tickLine={false}
-            interval={tickInterval}
-          />
-          <YAxis
-            stroke="var(--chart-axis)"
-            tick={{ fill: 'var(--ink-muted)', fontSize: 12 }}
-            tickLine={false}
-            domain={yAxisDomain}
-            ticks={yAxisTicks}
-          />
-          <Tooltip content={<CustomTooltip />} />
-
-          {/* Target trajectory line (dashed) - MUST be linear for straight line */}
-          <Line
-            type="linear"
-            dataKey="target"
-            stroke="var(--chart-target)"
-            strokeWidth={2}
-            strokeDasharray="5 5"
-            dot={false}
-            activeDot={{ r: 4, fill: 'var(--chart-target)' }}
-          />
-
-          {/* Actual weight line - connects all actual data points */}
-          <Line
-            type="monotone"
-            dataKey="weight"
-            stroke="var(--chart-actual)"
-            strokeWidth={3}
-            dot={{ fill: 'var(--chart-actual)', r: 4 }}
-            activeDot={{ r: 6, fill: 'var(--chart-actual)' }}
-            connectNulls={true}
-            isAnimationActive={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-
-      {/* Milestone markers */}
-      <div className="mt-6 grid grid-cols-2 gap-4">
-        <div className="rounded-2xl p-4 border border-[color:var(--border-subtle)] bg-[var(--paper-2)]">
-          <div className="text-sm text-[var(--ink-muted)] mb-1">Starting Weight</div>
-          <div className="text-2xl font-bold text-[var(--accent-2)]">{targetData.startWeight} kg</div>
-        </div>
-        <div className="rounded-2xl p-4 border border-[color:var(--border-subtle)] bg-[var(--paper-2)]">
-          <div className="text-sm text-[var(--ink-muted)] mb-1">Current Weight</div>
-          <div className="text-2xl font-bold text-[var(--accent)]">
-            {entries[entries.length - 1].weight} kg
+      {showTable && (
+        <div className="mt-8">
+          <div className="mb-3 text-xs text-[var(--ink-muted)]">
+            Showing {rangeLabel}
           </div>
+          <WeightHistoryTable entries={entriesInRange} />
         </div>
-      </div>
+      )}
     </div>
   );
 };
